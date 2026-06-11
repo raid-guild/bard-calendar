@@ -5,10 +5,10 @@ This app exposes a small authenticated API for planner and creator agents.
 All `/api/agent/*` requests require:
 
 ```http
-Authorization: Bearer <AGENT_API_TOKEN>
+Authorization: Bearer <BARD_CALENDAR_AGENT_API_TOKEN>
 ```
 
-Set `AGENT_API_TOKEN` in the deployment environment. Do not expose it to browser/client code.
+Set `BARD_CALENDAR_AGENT_API_TOKEN` in the deployment environment. Do not expose it to browser/client code.
 
 ## Fetch Events
 
@@ -34,7 +34,7 @@ Example:
 
 ```bash
 curl "https://calendar.example.com/api/agent/events?start=2026-07-01T00:00:00.000Z&end=2026-07-31T23:59:59.999Z&status=planned&target_channel=discord&name=weekly" \
-  -H "Authorization: Bearer $AGENT_API_TOKEN"
+  -H "Authorization: Bearer $BARD_CALENDAR_AGENT_API_TOKEN"
 ```
 
 Response:
@@ -101,7 +101,7 @@ Example:
 
 ```bash
 curl -X POST "https://calendar.example.com/api/agent/events" \
-  -H "Authorization: Bearer $AGENT_API_TOKEN" \
+  -H "Authorization: Bearer $BARD_CALENDAR_AGENT_API_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
     "name": "Share weekly raid opportunities thread",
@@ -145,7 +145,7 @@ Example:
 
 ```bash
 curl -X PUT "https://calendar.example.com/api/agent/events/upsert" \
-  -H "Authorization: Bearer $AGENT_API_TOKEN" \
+  -H "Authorization: Bearer $BARD_CALENDAR_AGENT_API_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
     "external_source": "content-planner-agent",
@@ -190,7 +190,7 @@ Example:
 
 ```bash
 curl -X PATCH "https://calendar.example.com/api/agent/events/evt_..." \
-  -H "Authorization: Bearer $AGENT_API_TOKEN" \
+  -H "Authorization: Bearer $BARD_CALENDAR_AGENT_API_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
     "status": "drafting",

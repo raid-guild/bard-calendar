@@ -55,7 +55,7 @@ This is not a full social media scheduler in the MVP. It tracks publishing inten
 - Database access: **Drizzle ORM**
 - Database for MVP: **Railway Postgres**
 - Validation: **zod**
-- API auth: static bearer token in `AGENT_API_TOKEN`
+- API auth: static bearer token in `BARD_CALENDAR_AGENT_API_TOKEN`
 - Deployment: **Railway**
 
 ## Database Choice
@@ -77,7 +77,7 @@ Use Drizzle's Postgres adapter and SQL migrations. Keep schema definitions porta
 
 ```env
 DATABASE_URL=postgresql://...
-AGENT_API_TOKEN=replace-with-long-random-token
+BARD_CALENDAR_AGENT_API_TOKEN=replace-with-long-random-token
 NEXT_PUBLIC_APP_NAME=Raid Guild Content Calendar
 ```
 
@@ -161,7 +161,7 @@ Example:
 All `/api/agent/*` endpoints require:
 
 ```http
-Authorization: Bearer <AGENT_API_TOKEN>
+Authorization: Bearer <BARD_CALENDAR_AGENT_API_TOKEN>
 ```
 
 Return `401` when missing or invalid.
@@ -419,7 +419,7 @@ lib/
 - Set `created_at` and `updated_at` in server code.
 - Use UTC internally; display local time in the UI.
 - Avoid adding auth assumptions to the UI. The app is intentionally unauthenticated for MVP.
-- Do not expose `AGENT_API_TOKEN` to client code.
+- Do not expose `BARD_CALENDAR_AGENT_API_TOKEN` to client code.
 
 ## Railway Deployment Notes
 

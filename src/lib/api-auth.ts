@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 
 export function isAuthorizedAgentRequest(request: NextRequest) {
-  const token = process.env.AGENT_API_TOKEN;
+  const token = process.env.BARD_CALENDAR_AGENT_API_TOKEN;
 
   if (!token) {
     return false;

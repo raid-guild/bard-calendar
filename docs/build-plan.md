@@ -248,9 +248,9 @@ Route behavior:
 
 Agent auth:
 
-- Require `Authorization: Bearer <AGENT_API_TOKEN>`.
+- Require `Authorization: Bearer <BARD_CALENDAR_AGENT_API_TOKEN>`.
 - Return `401` when missing or invalid.
-- Never expose `AGENT_API_TOKEN` to client code.
+- Never expose `BARD_CALENDAR_AGENT_API_TOKEN` to client code.
 
 ## Phase 6: UI Shell
 
@@ -391,7 +391,7 @@ Environment variables:
 
 ```env
 DATABASE_URL=postgresql://...
-AGENT_API_TOKEN=replace-with-long-random-token
+BARD_CALENDAR_AGENT_API_TOKEN=replace-with-long-random-token
 NEXT_PUBLIC_APP_NAME=Raid Guild Content Calendar
 ```
 

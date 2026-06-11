@@ -35,7 +35,7 @@ Set:
 
 ```env
 DATABASE_URL=postgresql://postgres:postgres@localhost:5432/raidguild_calendar
-AGENT_API_TOKEN=replace-with-long-random-token
+BARD_CALENDAR_AGENT_API_TOKEN=replace-with-long-random-token
 NEXT_PUBLIC_APP_NAME=Raid Guild Content Calendar
 ```
 
@@ -93,7 +93,7 @@ PUT   /api/agent/events/upsert
 Agent endpoints require:
 
 ```http
-Authorization: Bearer <AGENT_API_TOKEN>
+Authorization: Bearer <BARD_CALENDAR_AGENT_API_TOKEN>
 ```
 
 See `AGENT.md` for supported filters, request examples, and response shape.
@@ -119,6 +119,6 @@ The app expects PostgreSQL in local development and Railway Postgres in producti
 ## Notes
 
 - The MVP UI is intentionally unauthenticated.
-- `AGENT_API_TOKEN` must never be exposed to client code.
+- `BARD_CALENDAR_AGENT_API_TOKEN` must never be exposed to client code.
 - Event timestamps are accepted as ISO 8601 strings at the API boundary and stored as `timestamptz`.
 - The calendar supports month and week views.
