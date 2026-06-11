@@ -84,9 +84,10 @@ DELETE /api/events/:id
 Agent endpoints:
 
 ```txt
-GET  /api/agent/events
-POST /api/agent/events
-PUT  /api/agent/events/upsert
+GET   /api/agent/events
+POST  /api/agent/events
+PATCH /api/agent/events/:id
+PUT   /api/agent/events/upsert
 ```
 
 Agent endpoints require:

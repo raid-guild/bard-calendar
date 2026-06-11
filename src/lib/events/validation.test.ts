@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { agentUpsertSchema, eventCreateSchema } from "@/lib/events/validation";
+import { agentUpsertSchema, eventCreateSchema, eventUpdateSchema } from "@/lib/events/validation";
 
 const validEvent = {
   name: "Share weekly raid opportunities thread",
@@ -41,5 +41,17 @@ describe("event validation", () => {
 
     expect(missingIdentity.success).toBe(false);
     expect(withIdentity.success).toBe(true);
+  });
+
+  it("accepts partial event updates", () => {
+    const parsed = eventUpdateSchema.safeParse({
+      status: "drafting",
+      draft_url: "https://example.com/draft",
+      metadata: {
+        source_doc: "https://example.com/brief",
+      },
+    });
+
+    expect(parsed.success).toBe(true);
   });
 });

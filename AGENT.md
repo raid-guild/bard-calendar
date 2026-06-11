@@ -157,6 +157,49 @@ curl -X PUT "https://calendar.example.com/api/agent/events/upsert" \
   }'
 ```
 
+## Update Event
+
+```http
+PATCH /api/agent/events/{id}
+```
+
+Updates one existing event by calendar event `id`. Use this endpoint when the event already exists in the app, especially for human-created events that do not have stable `external_source + external_id`.
+
+Send only the fields that should change.
+
+Optional fields:
+
+```txt
+name
+publish_at
+target_channel
+status
+content_type
+campaign
+owner
+draft_url
+media_url
+live_url
+notes
+metadata
+external_source
+external_id
+```
+
+Example:
+
+```bash
+curl -X PATCH "https://calendar.example.com/api/agent/events/evt_..." \
+  -H "Authorization: Bearer $AGENT_API_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "status": "drafting",
+    "draft_url": "https://example.com/draft"
+  }'
+```
+
+Use `PUT /api/agent/events/upsert` only when the agent has a stable `external_source + external_id` and wants idempotent create-or-update behavior.
+
 ## Status Codes
 
 ```txt
@@ -164,6 +207,7 @@ curl -X PUT "https://calendar.example.com/api/agent/events/upsert" \
 201  Event created
 400  Invalid request body or query
 401  Missing or invalid bearer token
+404  Event not found
 ```
 
 ## Timestamp Rules
