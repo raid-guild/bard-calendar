@@ -22,6 +22,7 @@ type CalendarViewProps = {
   onViewChange: (view: View) => void;
   onSelectSlot: (date: Date) => void;
   onSelectEvent: (event: PublishingEvent) => void;
+  canEdit: boolean;
 };
 
 export function CalendarView({
@@ -32,6 +33,7 @@ export function CalendarView({
   onViewChange,
   onSelectSlot,
   onSelectEvent,
+  canEdit,
 }: CalendarViewProps) {
   const calendarEvents = events.map((event) => ({
     ...event,
@@ -50,9 +52,13 @@ export function CalendarView({
         events={calendarEvents}
         onNavigate={onDateChange}
         onView={onViewChange}
-        onSelectSlot={(slot: SlotInfo) => onSelectSlot(slot.start)}
+        onSelectSlot={(slot: SlotInfo) => {
+          if (canEdit) {
+            onSelectSlot(slot.start);
+          }
+        }}
         onSelectEvent={(event) => onSelectEvent(event as PublishingEvent)}
-        selectable
+        selectable={canEdit}
         popup
         eventPropGetter={(event) => {
           const color = statusColors[event.status as keyof typeof statusColors] ?? "hsl(160 63% 50%)";

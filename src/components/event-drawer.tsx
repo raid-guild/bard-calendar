@@ -26,6 +26,7 @@ type EventDrawerProps = {
   initialDate: Date | null;
   saving: boolean;
   deleting: boolean;
+  readOnly: boolean;
   onOpenChange: (open: boolean) => void;
   onSave: (payload: EventPayload) => Promise<void>;
   onDelete: () => Promise<void>;
@@ -91,6 +92,7 @@ export function EventDrawer({
   initialDate,
   saving,
   deleting,
+  readOnly,
   onOpenChange,
   onSave,
   onDelete,
@@ -114,6 +116,10 @@ export function EventDrawer({
 
   const handleSubmit = async (submitEvent: React.FormEvent<HTMLFormElement>) => {
     submitEvent.preventDefault();
+
+    if (readOnly) {
+      return;
+    }
 
     if (!form.name.trim()) {
       setError("Name is required.");
@@ -166,10 +172,10 @@ export function EventDrawer({
       <SheetContent className="flex w-full flex-col border-border bg-background p-0 sm:max-w-2xl">
         <SheetHeader className="border-b border-border px-6 py-5">
           <SheetTitle className="font-heading text-xl">
-            {event ? "Edit event" : "New event"}
+            {readOnly ? "View event" : event ? "Edit event" : "New event"}
           </SheetTitle>
           <SheetDescription className="font-mono text-xs uppercase tracking-[0.16em]">
-            Publishing intent, draft links, channel, and status
+            {readOnly ? "Read-only publishing details" : "Publishing intent, draft links, channel, and status"}
           </SheetDescription>
         </SheetHeader>
 
@@ -189,6 +195,7 @@ export function EventDrawer({
                   value={form.name}
                   onChange={(inputEvent) => setField("name", inputEvent.target.value)}
                   required
+                  disabled={readOnly}
                   className="rounded-sm"
                 />
               </div>
@@ -202,12 +209,17 @@ export function EventDrawer({
                     value={form.publish_at}
                     onChange={(inputEvent) => setField("publish_at", inputEvent.target.value)}
                     required
+                    disabled={readOnly}
                     className="rounded-sm"
                   />
                 </div>
                 <div className="grid gap-2">
                   <Label>Target channel</Label>
-                  <Select value={form.target_channel} onValueChange={(value) => setField("target_channel", value)}>
+                  <Select
+                    value={form.target_channel}
+                    onValueChange={(value) => setField("target_channel", value)}
+                    disabled={readOnly}
+                  >
                     <SelectTrigger className="rounded-sm">
                       <SelectValue />
                     </SelectTrigger>
@@ -225,7 +237,7 @@ export function EventDrawer({
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="grid gap-2">
                   <Label>Status</Label>
-                  <Select value={form.status} onValueChange={(value) => setField("status", value)}>
+                  <Select value={form.status} onValueChange={(value) => setField("status", value)} disabled={readOnly}>
                     <SelectTrigger className="rounded-sm">
                       <SelectValue />
                     </SelectTrigger>
@@ -244,6 +256,7 @@ export function EventDrawer({
                     id="content_type"
                     value={form.content_type}
                     onChange={(inputEvent) => setField("content_type", inputEvent.target.value)}
+                    disabled={readOnly}
                     className="rounded-sm"
                   />
                 </div>
@@ -253,11 +266,12 @@ export function EventDrawer({
                 <div className="grid gap-2">
                   <Label htmlFor="campaign">Campaign</Label>
                   <Input
-                    id="campaign"
-                    value={form.campaign}
-                    onChange={(inputEvent) => setField("campaign", inputEvent.target.value)}
-                    className="rounded-sm"
-                  />
+                  id="campaign"
+                  value={form.campaign}
+                  onChange={(inputEvent) => setField("campaign", inputEvent.target.value)}
+                  disabled={readOnly}
+                  className="rounded-sm"
+                />
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="owner">Owner</Label>
@@ -265,6 +279,7 @@ export function EventDrawer({
                     id="owner"
                     value={form.owner}
                     onChange={(inputEvent) => setField("owner", inputEvent.target.value)}
+                    disabled={readOnly}
                     className="rounded-sm"
                   />
                 </div>
@@ -277,6 +292,7 @@ export function EventDrawer({
                   type="url"
                   value={form.draft_url}
                   onChange={(inputEvent) => setField("draft_url", inputEvent.target.value)}
+                  disabled={readOnly}
                   className="rounded-sm"
                 />
               </div>
@@ -289,6 +305,7 @@ export function EventDrawer({
                     type="url"
                     value={form.media_url}
                     onChange={(inputEvent) => setField("media_url", inputEvent.target.value)}
+                    disabled={readOnly}
                     className="rounded-sm"
                   />
                 </div>
@@ -299,6 +316,7 @@ export function EventDrawer({
                     type="url"
                     value={form.live_url}
                     onChange={(inputEvent) => setField("live_url", inputEvent.target.value)}
+                    disabled={readOnly}
                     className="rounded-sm"
                   />
                 </div>
@@ -310,6 +328,7 @@ export function EventDrawer({
                   id="notes"
                   value={form.notes}
                   onChange={(inputEvent) => setField("notes", inputEvent.target.value)}
+                  disabled={readOnly}
                   className="min-h-28 rounded-sm"
                 />
               </div>
@@ -320,6 +339,7 @@ export function EventDrawer({
                   id="metadata"
                   value={form.metadata}
                   onChange={(inputEvent) => setField("metadata", inputEvent.target.value)}
+                  disabled={readOnly}
                   className="min-h-32 rounded-sm font-mono text-xs"
                   spellCheck={false}
                 />
@@ -328,8 +348,9 @@ export function EventDrawer({
           </ScrollArea>
         </form>
 
-        <SheetFooter className="border-t border-border px-6 py-4">
-          {event ? (
+        {readOnly ? null : (
+          <SheetFooter className="border-t border-border px-6 py-4">
+            {event ? (
             <Button
               type="button"
               variant="destructive"
@@ -340,12 +361,13 @@ export function EventDrawer({
               <Trash2 className="mr-2 h-4 w-4" />
               {deleting ? "Deleting" : "Delete"}
             </Button>
-          ) : null}
-          <Button form="event-form" type="submit" className="rounded-sm" disabled={saving || deleting}>
-            <Save className="mr-2 h-4 w-4" />
-            {saving ? "Saving" : "Save event"}
-          </Button>
-        </SheetFooter>
+            ) : null}
+            <Button form="event-form" type="submit" className="rounded-sm" disabled={saving || deleting}>
+              <Save className="mr-2 h-4 w-4" />
+              {saving ? "Saving" : "Save event"}
+            </Button>
+          </SheetFooter>
+        )}
       </SheetContent>
     </Sheet>
   );

@@ -9,10 +9,23 @@ import { CalendarView } from "@/components/calendar-view";
 import { EventDrawer } from "@/components/event-drawer";
 import { EventsTable } from "@/components/events-table";
 import { Filters } from "@/components/filters";
+import { PortalLaunchRequired } from "@/components/portal-launch-required";
 import { TopBar } from "@/components/top-bar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { createEvent, deleteEvent, fetchEvents, updateEvent } from "@/lib/events/client";
 import type { EventFilters, EventPayload, PublishingEvent } from "@/lib/events/types";
+
+type PortalSessionResponse = {
+  user?: {
+    name?: string;
+    handle?: string;
+    picture?: string;
+    roles: string[];
+  };
+  canView: boolean;
+  canEdit: boolean;
+  portalModulesUrl: string;
+};
 
 function rangeFor(date: Date, view: View) {
   if (view === "week") {
@@ -42,6 +55,25 @@ function navigateDate(date: Date, view: View, action: "TODAY" | "PREV" | "NEXT")
   return action === "PREV" ? subMonths(date, 1) : addMonths(date, 1);
 }
 
+async function fetchPortalSession(): Promise<PortalSessionResponse> {
+  const response = await fetch("/api/session", { cache: "no-store" });
+  const json = await response.json().catch(() => ({}));
+
+  if (response.status === 401) {
+    return {
+      canView: false,
+      canEdit: false,
+      portalModulesUrl: json.portalModulesUrl ?? "https://portal.raidguild.org/modules",
+    } satisfies PortalSessionResponse;
+  }
+
+  if (!response.ok) {
+    throw new Error(json.error ?? "Unable to load Portal session.");
+  }
+
+  return json as PortalSessionResponse;
+}
+
 export function AppShell() {
   const queryClient = useQueryClient();
   const [date, setDate] = useState(() => new Date());
@@ -61,9 +93,19 @@ export function AppShell() {
     [filters, range.end, range.start],
   );
 
+  const sessionQuery = useQuery({
+    queryKey: ["portal-session"],
+    queryFn: fetchPortalSession,
+    retry: false,
+  });
+
+  const canView = sessionQuery.data?.canView === true;
+  const canEdit = sessionQuery.data?.canEdit === true;
+
   const eventsQuery = useQuery({
     queryKey: ["events", queryFilters],
     queryFn: () => fetchEvents(queryFilters),
+    enabled: canView,
   });
 
   const invalidateEvents = () => queryClient.invalidateQueries({ queryKey: ["events"] });
@@ -101,6 +143,10 @@ export function AppShell() {
   const events = eventsQuery.data ?? [];
 
   const openNewEvent = (prefilledDate = new Date()) => {
+    if (!canEdit) {
+      return;
+    }
+
     setSelectedEvent(null);
     setInitialDate(prefilledDate);
     setDrawerOpen(true);
@@ -113,6 +159,10 @@ export function AppShell() {
   };
 
   const saveEvent = async (payload: EventPayload) => {
+    if (!canEdit) {
+      return;
+    }
+
     if (selectedEvent) {
       await updateMutation.mutateAsync({ id: selectedEvent.id, payload });
       return;
@@ -122,16 +172,57 @@ export function AppShell() {
   };
 
   const removeEvent = async () => {
+    if (!canEdit) {
+      return;
+    }
+
     if (selectedEvent) {
       await deleteMutation.mutateAsync(selectedEvent.id);
     }
   };
+
+  if (sessionQuery.isLoading) {
+    return (
+      <div className="noise-bg relative flex min-h-screen items-center justify-center bg-background text-foreground">
+        <div className="relative z-10 font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">
+          Checking Portal access
+        </div>
+      </div>
+    );
+  }
+
+  if (sessionQuery.isError) {
+    return (
+      <PortalLaunchRequired
+        title="Portal session unavailable"
+        message="We could not verify your Portal session. Please return to the Portal and open the calendar again."
+        portalModulesUrl="https://portal.raidguild.org/modules"
+      />
+    );
+  }
+
+  if (!canView) {
+    const hasSession = Boolean(sessionQuery.data?.user);
+
+    return (
+      <PortalLaunchRequired
+        title={hasSession ? "Calendar access unavailable" : "Raid Guild Content Calendar"}
+        message={
+          hasSession
+            ? "Your Portal account does not currently have access to this module."
+            : "This module needs to be opened from the Raid Guild Portal."
+        }
+        portalModulesUrl={sessionQuery.data?.portalModulesUrl ?? "https://portal.raidguild.org/modules"}
+      />
+    );
+  }
 
   return (
     <div className="noise-bg relative min-h-screen bg-background text-foreground">
       <TopBar
         rangeLabel={range.label}
         view={view}
+        canEdit={canEdit}
         onViewChange={setView}
         onNavigate={(action) => setDate((current) => navigateDate(current, view, action))}
         onNewEvent={() => openNewEvent(new Date())}
@@ -162,6 +253,7 @@ export function AppShell() {
               onViewChange={setView}
               onSelectSlot={openNewEvent}
               onSelectEvent={openExistingEvent}
+              canEdit={canEdit}
             />
           </TabsContent>
 
@@ -178,6 +270,7 @@ export function AppShell() {
         initialDate={initialDate}
         saving={createMutation.isPending || updateMutation.isPending}
         deleting={deleteMutation.isPending}
+        readOnly={!canEdit}
         onOpenChange={setDrawerOpen}
         onSave={saveEvent}
         onDelete={removeEvent}

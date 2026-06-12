@@ -8,12 +8,13 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 type TopBarProps = {
   rangeLabel: string;
   view: View;
+  canEdit: boolean;
   onViewChange: (view: View) => void;
   onNavigate: (action: "TODAY" | "PREV" | "NEXT") => void;
   onNewEvent: () => void;
 };
 
-export function TopBar({ rangeLabel, view, onViewChange, onNavigate, onNewEvent }: TopBarProps) {
+export function TopBar({ rangeLabel, view, canEdit, onViewChange, onNavigate, onNewEvent }: TopBarProps) {
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur-xl">
       <div className="mx-auto flex min-h-16 max-w-[1600px] flex-col gap-3 px-4 py-3 lg:flex-row lg:items-center lg:justify-between lg:px-6">
@@ -72,10 +73,16 @@ export function TopBar({ rangeLabel, view, onViewChange, onNavigate, onNewEvent 
             <ChevronRight className="h-4 w-4" />
             <span className="sr-only">Next</span>
           </Button>
-          <Button size="sm" className="rounded-sm font-heading text-xs uppercase tracking-wider" onClick={onNewEvent}>
-            <Plus className="mr-2 h-4 w-4" />
-            New event
-          </Button>
+          {canEdit ? (
+            <Button size="sm" className="rounded-sm font-heading text-xs uppercase tracking-wider" onClick={onNewEvent}>
+              <Plus className="mr-2 h-4 w-4" />
+              New event
+            </Button>
+          ) : (
+            <div className="border border-border bg-muted/30 px-3 py-2 font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
+              View only
+            </div>
+          )}
         </div>
       </div>
     </header>
