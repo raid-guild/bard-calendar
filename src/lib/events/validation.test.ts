@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { agentUpsertSchema, eventCreateSchema, eventUpdateSchema } from "@/lib/events/validation";
+import {
+  agentUpsertSchema,
+  eventCreateSchema,
+  eventUpdateSchema,
+} from "@/lib/events/validation";
 
 const validEvent = {
   name: "Share weekly raid opportunities thread",
@@ -8,7 +12,7 @@ const validEvent = {
   status: "planned",
   draft_url: "https://example.com/draft",
   metadata: {
-    persona: "Raid Guild",
+    persona: "RaidGuild",
   },
 };
 
@@ -26,7 +30,10 @@ describe("event validation", () => {
   });
 
   it("rejects invalid URLs", () => {
-    const parsed = eventCreateSchema.safeParse({ ...validEvent, media_url: "not-a-url" });
+    const parsed = eventCreateSchema.safeParse({
+      ...validEvent,
+      media_url: "not-a-url",
+    });
 
     expect(parsed.success).toBe(false);
   });

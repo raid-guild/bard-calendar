@@ -1,11 +1,11 @@
-# Raid Guild Social Content Calendar - Custom Build Spec
+# RaidGuild Social Content Calendar - Custom Build Spec
 
 Status: draft handoff spec
 Date: June 11, 2026
 
 ## Purpose
 
-Build a lightweight internal social content calendar for Raid Guild. The app should let humans view and manage publishing events while giving planner/creator agents a simple API for pushing planned events into the calendar.
+Build a lightweight internal social content calendar for RaidGuild. The app should let humans view and manage publishing events while giving planner/creator agents a simple API for pushing planned events into the calendar.
 
 This is not a full social media scheduler in the MVP. It tracks publishing intent, drafts, media links, statuses, and channel targets. Direct publishing, SSO, and deep portal integration come later.
 
@@ -18,14 +18,14 @@ This is not a full social media scheduler in the MVP. It tracks publishing inten
 - Simple static bearer-token API auth.
 - Deploy on Railway.
 - Use Next.js for frontend, server, and API.
-- Use Tailwind theme already prepared by Raid Guild.
+- Use Tailwind theme already prepared by RaidGuild.
 - Use shadcn/ui for common interface components.
 - Use React Big Calendar for the calendar surface.
 
 ## Non-Goals For MVP
 
 - User login/auth in the app.
-- Raid Guild portal SSO.
+- RaidGuild portal SSO.
 - Direct publishing to Discord, X, LinkedIn, etc.
 - OAuth social account connection.
 - Approval workflows beyond event status.
@@ -35,7 +35,7 @@ This is not a full social media scheduler in the MVP. It tracks publishing inten
 
 ## Post-MVP Goals
 
-- Add auth using SSO from an existing Raid Guild portal app.
+- Add auth using SSO from an existing RaidGuild portal app.
 - Make this app act as a light client launched from/passed off by the portal.
 - Add role-based access if needed: viewer, editor, admin, agent.
 - Add richer approval workflow: draft -> review -> approved -> scheduled -> published.
@@ -78,7 +78,7 @@ Use Drizzle's Postgres adapter and SQL migrations. Keep schema definitions porta
 ```env
 DATABASE_URL=postgresql://...
 BARD_CALENDAR_AGENT_API_TOKEN=replace-with-long-random-token
-NEXT_PUBLIC_APP_NAME=Raid Guild Content Calendar
+NEXT_PUBLIC_APP_NAME=RaidGuild Content Calendar
 ```
 
 Post-MVP auth variables can be added later once the SSO provider is known.
@@ -127,7 +127,7 @@ type PublishingStatus =
 
 ### Target Channels
 
-Keep `target_channel` as a string in MVP so Raid Guild can add channels without migrations.
+Keep `target_channel` as a string in MVP so RaidGuild can add channels without migrations.
 
 Expected initial values:
 
@@ -149,7 +149,7 @@ Example:
 
 ```json
 {
-  "persona": "Raid Guild",
+  "persona": "RaidGuild",
   "priority": "normal",
   "source_brief_url": "https://...",
   "agent_notes": "Generated from weekly content brief."
@@ -267,7 +267,7 @@ Example:
   "draft_url": "https://...",
   "media_url": "https://...",
   "metadata": {
-    "persona": "Raid Guild",
+    "persona": "RaidGuild",
     "priority": "normal"
   }
 }
@@ -463,10 +463,10 @@ Manual acceptance test:
 
 ## Open Questions
 
-- Which Raid Guild portal SSO provider will eventually pass users into this app?
+- Which RaidGuild portal SSO provider will eventually pass users into this app?
 - Should initial events be public to anyone with the URL, or protected by a temporary shared secret/basic auth before SSO?
-- What are the canonical channel names Raid Guild wants?
-- Should event times default to a Raid Guild timezone, UTC, or the user's local timezone?
+- What are the canonical channel names RaidGuild wants?
+- Should event times default to a RaidGuild timezone, UTC, or the user's local timezone?
 - Should agents be allowed to delete events, or only create/update/upsert?
 
 ## References

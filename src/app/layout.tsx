@@ -3,9 +3,9 @@ import Providers from "@/app/providers";
 import "@/index.css";
 
 export const metadata: Metadata = {
-  title: "Raid Guild Content Calendar",
+  title: "RaidGuild Content Calendar",
   description:
-    "Internal social content calendar for Raid Guild publishing plans, drafts, channel targets, and agent-created events.",
+    "Internal social content calendar for RaidGuild publishing plans, drafts, channel targets, and agent-created events.",
 };
 
 export default function RootLayout({

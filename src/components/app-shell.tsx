@@ -1,7 +1,17 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { addMonths, addWeeks, endOfMonth, endOfWeek, format, startOfMonth, startOfWeek, subMonths, subWeeks } from "date-fns";
+import {
+  addMonths,
+  addWeeks,
+  endOfMonth,
+  endOfWeek,
+  format,
+  startOfMonth,
+  startOfWeek,
+  subMonths,
+  subWeeks,
+} from "date-fns";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { View } from "react-big-calendar";
 import { toast } from "sonner";
@@ -12,8 +22,17 @@ import { Filters } from "@/components/filters";
 import { PortalLaunchRequired } from "@/components/portal-launch-required";
 import { TopBar } from "@/components/top-bar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { createEvent, deleteEvent, fetchEvents, updateEvent } from "@/lib/events/client";
-import type { EventFilters, EventPayload, PublishingEvent } from "@/lib/events/types";
+import {
+  createEvent,
+  deleteEvent,
+  fetchEvents,
+  updateEvent,
+} from "@/lib/events/client";
+import type {
+  EventFilters,
+  EventPayload,
+  PublishingEvent,
+} from "@/lib/events/types";
 
 type PortalSessionResponse = {
   user?: {
@@ -43,7 +62,11 @@ function rangeFor(date: Date, view: View) {
   };
 }
 
-function navigateDate(date: Date, view: View, action: "TODAY" | "PREV" | "NEXT") {
+function navigateDate(
+  date: Date,
+  view: View,
+  action: "TODAY" | "PREV" | "NEXT",
+) {
   if (action === "TODAY") {
     return new Date();
   }
@@ -63,7 +86,8 @@ async function fetchPortalSession(): Promise<PortalSessionResponse> {
     return {
       canView: false,
       canEdit: false,
-      portalModulesUrl: json.portalModulesUrl ?? "https://portal.raidguild.org/modules",
+      portalModulesUrl:
+        json.portalModulesUrl ?? "https://portal.raidguild.org/modules",
     } satisfies PortalSessionResponse;
   }
 
@@ -80,7 +104,9 @@ export function AppShell() {
   const [view, setView] = useState<View>("month");
   const [filters, setFilters] = useState<EventFilters>({});
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [selectedEvent, setSelectedEvent] = useState<PublishingEvent | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<PublishingEvent | null>(
+    null,
+  );
   const [initialDate, setInitialDate] = useState<Date | null>(null);
 
   const range = useMemo(() => rangeFor(date, view), [date, view]);
@@ -108,7 +134,8 @@ export function AppShell() {
     enabled: canView,
   });
 
-  const invalidateEvents = () => queryClient.invalidateQueries({ queryKey: ["events"] });
+  const invalidateEvents = () =>
+    queryClient.invalidateQueries({ queryKey: ["events"] });
 
   const createMutation = useMutation({
     mutationFn: createEvent,
@@ -121,7 +148,8 @@ export function AppShell() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, payload }: { id: string; payload: EventPayload }) => updateEvent(id, payload),
+    mutationFn: ({ id, payload }: { id: string; payload: EventPayload }) =>
+      updateEvent(id, payload),
     onSuccess: async () => {
       await invalidateEvents();
       setDrawerOpen(false);
@@ -195,7 +223,7 @@ export function AppShell() {
     return (
       <PortalLaunchRequired
         title="Portal session unavailable"
-        message="We could not verify your Portal session. Please return to the Portal and open the calendar again."
+        message="We could not verify your RaidGuild Portal session. Please return to the Portal and open the calendar again."
         portalModulesUrl="https://portal.raidguild.org/modules"
       />
     );
@@ -206,13 +234,20 @@ export function AppShell() {
 
     return (
       <PortalLaunchRequired
-        title={hasSession ? "Calendar access unavailable" : "Raid Guild Content Calendar"}
+        title={
+          hasSession
+            ? "Calendar access unavailable"
+            : "RaidGuild Content Calendar"
+        }
         message={
           hasSession
-            ? "Your Portal account does not currently have access to this module."
-            : "This module needs to be opened from the Raid Guild Portal."
+            ? "Your RaidGuild Portal account does not currently have access to this module."
+            : "This module needs to be opened from the RaidGuild Portal."
         }
-        portalModulesUrl={sessionQuery.data?.portalModulesUrl ?? "https://portal.raidguild.org/modules"}
+        portalModulesUrl={
+          sessionQuery.data?.portalModulesUrl ??
+          "https://portal.raidguild.org/modules"
+        }
       />
     );
   }
@@ -224,7 +259,9 @@ export function AppShell() {
         view={view}
         canEdit={canEdit}
         onViewChange={setView}
-        onNavigate={(action) => setDate((current) => navigateDate(current, view, action))}
+        onNavigate={(action) =>
+          setDate((current) => navigateDate(current, view, action))
+        }
         onNewEvent={() => openNewEvent(new Date())}
       />
 
@@ -232,15 +269,23 @@ export function AppShell() {
         <Tabs defaultValue="calendar" className="space-y-4">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <TabsList className="grid w-full grid-cols-2 rounded-sm border border-border bg-muted/40 lg:w-[280px]">
-              <TabsTrigger value="calendar" className="rounded-sm font-mono text-xs uppercase tracking-[0.14em]">
+              <TabsTrigger
+                value="calendar"
+                className="rounded-sm font-mono text-xs uppercase tracking-[0.14em]"
+              >
                 Calendar
               </TabsTrigger>
-              <TabsTrigger value="list" className="rounded-sm font-mono text-xs uppercase tracking-[0.14em]">
+              <TabsTrigger
+                value="list"
+                className="rounded-sm font-mono text-xs uppercase tracking-[0.14em]"
+              >
                 List
               </TabsTrigger>
             </TabsList>
             <div className="font-mono text-xs uppercase tracking-[0.16em] text-muted-foreground">
-              {eventsQuery.isFetching ? "Syncing events" : `${events.length} events loaded`}
+              {eventsQuery.isFetching
+                ? "Syncing events"
+                : `${events.length} events loaded`}
             </div>
           </div>
 

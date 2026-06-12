@@ -6,7 +6,7 @@ Source: `/home/skuhl/Documents/ody/raidguild/cohort/portal/docs/external-module-
 
 ## Objective
 
-Integrate the calendar as an external Raid Guild Portal module using Portal signed launch auth.
+Integrate the calendar as an external RaidGuild Portal module using Portal signed launch auth.
 
 Portal remains the source of truth for identity and roles. The calendar verifies the short-lived launch token, creates its own local session, and uses the Portal roles included at launch time to decide whether the user can view or edit.
 
@@ -242,9 +242,9 @@ Show an unauthorized launch view instead of the calendar.
 Suggested copy:
 
 ```txt
-Raid Guild Content Calendar
+RaidGuild Content Calendar
 
-This module needs to be opened from the Raid Guild Portal.
+This module needs to be opened from the RaidGuild Portal.
 
 Your Portal session signs a short-lived launch pass so we know who you are and whether you can edit the calendar.
 ```

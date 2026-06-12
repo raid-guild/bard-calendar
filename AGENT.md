@@ -113,7 +113,7 @@ curl -X POST "https://calendar.example.com/api/agent/events" \
     "owner": "comms",
     "draft_url": "https://example.com/draft",
     "metadata": {
-      "persona": "Raid Guild",
+      "persona": "RaidGuild",
       "priority": "normal"
     },
     "external_source": "content-planner-agent",

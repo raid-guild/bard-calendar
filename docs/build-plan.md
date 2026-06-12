@@ -1,4 +1,4 @@
-# Raid Guild Social Content Calendar - Build Plan
+# RaidGuild Social Content Calendar - Build Plan
 
 Status: implementation plan  
 Date: June 11, 2026  
@@ -7,7 +7,7 @@ Design reference: `../system-weaver`
 
 ## Build Objective
 
-Build a lightweight internal social content calendar for Raid Guild using Next.js App Router, Railway Postgres, Drizzle, shadcn/ui, and React Big Calendar.
+Build a lightweight internal social content calendar for RaidGuild using Next.js App Router, Railway Postgres, Drizzle, shadcn/ui, and React Big Calendar.
 
 The app should open directly to the working calendar experience. Do not build a marketing page. The visual direction should come from `system-weaver`: dark operational UI, compact controls, Space Grotesk headings, Inter body text, JetBrains Mono labels, teal primary actions, hot-pink/accent highlights, thin borders, 4px radii, and the existing Tailwind CSS variable theme.
 
@@ -34,7 +34,7 @@ Notes:
 
 ## Visual Direction
 
-The app should feel like an internal Raid Guild operations surface, not a landing page.
+The app should feel like an internal RaidGuild operations surface, not a landing page.
 
 Use:
 
@@ -392,7 +392,7 @@ Environment variables:
 ```env
 DATABASE_URL=postgresql://...
 BARD_CALENDAR_AGENT_API_TOKEN=replace-with-long-random-token
-NEXT_PUBLIC_APP_NAME=Raid Guild Content Calendar
+NEXT_PUBLIC_APP_NAME=RaidGuild Content Calendar
 ```
 
 Recommended scripts:

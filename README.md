@@ -1,8 +1,8 @@
-# Raid Guild Content Calendar
+# RaidGuild Content Calendar
 
-Lightweight internal social content calendar for Raid Guild publishing plans, drafts, media links, statuses, channel targets, and agent-created events.
+Lightweight internal social content calendar for RaidGuild publishing plans, drafts, media links, statuses, channel targets, and agent-created events.
 
-The app is a Next.js App Router build using the `system-weaver` Raid Guild visual system: dark operational UI, compact shadcn controls, Space Grotesk headings, Inter body text, JetBrains Mono labels, teal primary actions, and sharp 4px radii.
+The app is a Next.js App Router build using the `system-weaver` RaidGuild visual system: dark operational UI, compact shadcn controls, Space Grotesk headings, Inter body text, JetBrains Mono labels, teal primary actions, and sharp 4px radii.
 
 ## Stack
 
@@ -36,7 +36,7 @@ Set:
 ```env
 DATABASE_URL=postgresql://postgres:postgres@localhost:5432/raidguild_calendar
 BARD_CALENDAR_AGENT_API_TOKEN=replace-with-long-random-token
-NEXT_PUBLIC_APP_NAME=Raid Guild Content Calendar
+NEXT_PUBLIC_APP_NAME=RaidGuild Content Calendar
 ```
 
 Run migrations:

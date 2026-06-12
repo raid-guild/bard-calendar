@@ -14,7 +14,14 @@ type TopBarProps = {
   onNewEvent: () => void;
 };
 
-export function TopBar({ rangeLabel, view, canEdit, onViewChange, onNavigate, onNewEvent }: TopBarProps) {
+export function TopBar({
+  rangeLabel,
+  view,
+  canEdit,
+  onViewChange,
+  onNavigate,
+  onNewEvent,
+}: TopBarProps) {
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur-xl">
       <div className="mx-auto flex min-h-16 max-w-[1600px] flex-col gap-3 px-4 py-3 lg:flex-row lg:items-center lg:justify-between lg:px-6">
@@ -24,7 +31,7 @@ export function TopBar({ rangeLabel, view, canEdit, onViewChange, onNavigate, on
           </div>
           <div className="min-w-0">
             <h1 className="truncate font-heading text-lg font-semibold tracking-tight text-accent">
-              {process.env.NEXT_PUBLIC_APP_NAME ?? "Raid Guild Content Calendar"}
+              {process.env.NEXT_PUBLIC_APP_NAME ?? "RaidGuild Content Calendar"}
             </h1>
             <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
               {view} / {rangeLabel}
@@ -65,16 +72,30 @@ export function TopBar({ rangeLabel, view, canEdit, onViewChange, onNavigate, on
           >
             Today
           </Button>
-          <Button variant="outline" size="icon" className="h-9 w-9 rounded-sm" onClick={() => onNavigate("PREV")}>
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-9 w-9 rounded-sm"
+            onClick={() => onNavigate("PREV")}
+          >
             <ChevronLeft className="h-4 w-4" />
             <span className="sr-only">Previous</span>
           </Button>
-          <Button variant="outline" size="icon" className="h-9 w-9 rounded-sm" onClick={() => onNavigate("NEXT")}>
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-9 w-9 rounded-sm"
+            onClick={() => onNavigate("NEXT")}
+          >
             <ChevronRight className="h-4 w-4" />
             <span className="sr-only">Next</span>
           </Button>
           {canEdit ? (
-            <Button size="sm" className="rounded-sm font-heading text-xs uppercase tracking-wider" onClick={onNewEvent}>
+            <Button
+              size="sm"
+              className="rounded-sm font-heading text-xs uppercase tracking-wider"
+              onClick={onNewEvent}
+            >
               <Plus className="mr-2 h-4 w-4" />
               New event
             </Button>
