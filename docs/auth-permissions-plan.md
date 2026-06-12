@@ -98,6 +98,9 @@ Add placeholders to `.env.example` when implementation begins:
 # Must match the shared secret configured in the Portal module record.
 PORTAL_MODULE_LAUNCH_SECRET=replace-with-shared-launch-secret
 
+# Canonical public app origin used after Portal callback redirects.
+APP_BASE_URL=https://your-calendar-app.example.com
+
 # Expected launch token claims.
 PORTAL_MODULE_SLUG=bard-calendar
 PORTAL_MODULE_ISSUER=https://portal.raidguild.org

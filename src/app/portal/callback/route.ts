@@ -8,7 +8,8 @@ import {
 } from "@/lib/portal-auth";
 
 function redirectHome(request: NextRequest, status: string) {
-  return NextResponse.redirect(new URL(`/?portal_launch=${status}`, request.url));
+  const baseUrl = process.env.APP_BASE_URL ?? request.url;
+  return NextResponse.redirect(new URL(`/?portal_launch=${status}`, baseUrl));
 }
 
 function safeErrorMessage(error: unknown) {
