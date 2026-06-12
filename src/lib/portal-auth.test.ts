@@ -44,7 +44,7 @@ async function signLaunchToken(overrides: Partial<PortalLaunchClaims> = {}) {
     email: "member@example.com",
     name: "Member Name",
     handle: "member-handle",
-    roles: ["members"],
+    roles: ["member"],
     moduleSlug,
     scopes: ["profile:read"],
     ...overrides,
@@ -95,13 +95,13 @@ describe("Portal launch auth", () => {
   });
 
   it("normalizes view and edit permissions from roles", async () => {
-    const memberToken = await signLaunchToken({ roles: ["members"] });
+    const memberToken = await signLaunchToken({ roles: ["member"] });
     const adminToken = await signLaunchToken({ roles: ["admin"] });
 
     expect(normalizePortalSession(await verifyPortalLaunchToken(memberToken))).toMatchObject({
       portalUserID: "13",
       portalProfileID: "36",
-      roles: ["members"],
+      roles: ["member"],
       canView: true,
       canEdit: false,
     });

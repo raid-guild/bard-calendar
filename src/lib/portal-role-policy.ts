@@ -1,5 +1,5 @@
 export const portalRolePolicy = {
-  viewRoles: ["members", "admin"],
+  viewRoles: ["member", "members", "admin"],
   editRoles: ["admin"],
 } as const;
 

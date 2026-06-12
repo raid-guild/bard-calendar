@@ -3,6 +3,10 @@ import { getPortalPermissions, portalRolePolicy } from "@/lib/portal-role-policy
 
 describe("Portal role policy", () => {
   it("allows members to view without editing", () => {
+    expect(getPortalPermissions(["member"])).toEqual({
+      canView: true,
+      canEdit: false,
+    });
     expect(getPortalPermissions(["members"])).toEqual({
       canView: true,
       canEdit: false,
@@ -29,7 +33,7 @@ describe("Portal role policy", () => {
 
   it("keeps the policy centralized", () => {
     expect(portalRolePolicy).toEqual({
-      viewRoles: ["members", "admin"],
+      viewRoles: ["member", "members", "admin"],
       editRoles: ["admin"],
     });
   });

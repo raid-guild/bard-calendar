@@ -12,15 +12,15 @@ Portal remains the source of truth for identity and roles. The calendar verifies
 
 ## Authorization Rule
 
-Users with a Portal role including `members` or `admin` can view the calendar.
+Users with a Portal role including `member` or `admin` can view the calendar.
 
 Users with a Portal role including `admin` can edit calendar events.
 
-Users without `members` or `admin` should see an unauthorized view instead of the calendar, even if they have a valid Portal launch session.
+Users without `member` or `admin` should see an unauthorized view instead of the calendar, even if they have a valid Portal launch session.
 
 ```ts
 const rolePolicy = {
-  viewRoles: ["members", "admin"],
+  viewRoles: ["member", "members", "admin"],
   editRoles: ["admin"],
 };
 
@@ -29,7 +29,7 @@ const canView = rolePolicy.viewRoles.some((role) => roles.includes(role));
 const canEdit = rolePolicy.editRoles.some((role) => roles.includes(role));
 ```
 
-Keep this policy centralized in one helper or config object, not scattered across API routes and components. That makes later changes easy, such as allowing `member` instead of `members`, adding an `editor` role, or temporarily removing a role.
+Keep this policy centralized in one helper or config object, not scattered across API routes and components. That makes later changes easy, such as removing the legacy `members` alias, adding an `editor` role, or temporarily removing a role.
 
 Recommended implementation:
 
@@ -39,7 +39,7 @@ src/lib/portal-role-policy.ts
 
 ```ts
 export const portalRolePolicy = {
-  viewRoles: ["members", "admin"],
+  viewRoles: ["member", "members", "admin"],
   editRoles: ["admin"],
 } as const;
 ```
@@ -185,7 +185,7 @@ Example response:
     "name": "Member Name",
     "handle": "member-handle",
     "picture": "https://portal.raidguild.org/media/avatar.jpg",
-    "roles": ["members"]
+    "roles": ["member"]
   },
   "canView": true,
   "canEdit": false
@@ -276,7 +276,7 @@ This launch link is no longer valid. Please return to the Portal and open the Co
 
 Show the unauthorized view instead of the calendar.
 
-This covers users who launched successfully from Portal but do not have `members` or `admin`.
+This covers users who launched successfully from Portal but do not have `member` or `admin`.
 
 Suggested copy:
 
@@ -292,7 +292,7 @@ Primary action:
 Open Portal Modules
 ```
 
-### 3. Valid Session With `members`
+### 3. Valid Session With `member`
 
 Show the calendar in read-only mode.
 
@@ -368,7 +368,7 @@ Add tests for portal auth helpers:
 - Wrong `moduleSlug` fails.
 - Expired token fails.
 - Missing optional claims still creates a valid normalized session.
-- `roles: ["members"]` sets `canView: true` and `canEdit: false`.
+- `roles: ["member"]` sets `canView: true` and `canEdit: false`.
 - `roles: ["admin"]` sets `canView: true` and `canEdit: true`.
 - Missing roles or unrelated roles set `canView: false` and `canEdit: false`.
 - Role policy can be changed in one place without editing route handlers.
@@ -378,8 +378,8 @@ Add route-level tests where practical:
 - Event write without session returns `401`.
 - Event read with no session returns `401`.
 - Event read with unrelated role returns `403`.
-- Event read with `members` succeeds.
-- Event write with `members` returns `403`.
+- Event read with `member` succeeds.
+- Event write with `member` returns `403`.
 - Event write with `admin` succeeds.
 - Agent API event read/write still succeeds with `BARD_CALENDAR_AGENT_API_TOKEN` and no Portal session.
 
@@ -406,5 +406,5 @@ Add UI tests where practical:
 
 - Confirm final Portal module slug. Proposed: `bard-calendar`.
 - Decide local session lifetime.
-- Confirm exact Portal role spelling. Current plan assumes `members` and `admin`.
+- Confirm whether to keep the legacy `members` alias. Current Portal sessions use `member`.
 - Decide whether to add a logout route. It is not required for the first slice, but can be useful for local testing.
