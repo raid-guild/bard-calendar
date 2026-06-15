@@ -16,6 +16,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { View } from "react-big-calendar";
 import { toast } from "sonner";
 import { CalendarView } from "@/components/calendar-view";
+import { DraftsView } from "@/components/drafts-view";
 import { EventDrawer } from "@/components/event-drawer";
 import { EventsTable } from "@/components/events-table";
 import { Filters } from "@/components/filters";
@@ -28,6 +29,17 @@ import {
   fetchEvents,
   updateEvent,
 } from "@/lib/events/client";
+import {
+  assignDraftToEvent,
+  createDraft,
+  createTopic,
+  fetchDrafts,
+  fetchTopics,
+  toggleDraftDagger,
+  updateDraft,
+  updateTopic,
+} from "@/lib/content/client";
+import type { ContentDraft, ContentTopic, DraftPayload, TopicPayload } from "@/lib/content/types";
 import type {
   EventFilters,
   EventPayload,
@@ -136,6 +148,22 @@ export function AppShell() {
 
   const invalidateEvents = () =>
     queryClient.invalidateQueries({ queryKey: ["events"] });
+  const invalidateTopics = () =>
+    queryClient.invalidateQueries({ queryKey: ["topics"] });
+  const invalidateDrafts = () =>
+    queryClient.invalidateQueries({ queryKey: ["drafts"] });
+
+  const topicsQuery = useQuery({
+    queryKey: ["topics"],
+    queryFn: fetchTopics,
+    enabled: canView,
+  });
+
+  const draftsQuery = useQuery({
+    queryKey: ["drafts"],
+    queryFn: fetchDrafts,
+    enabled: canView,
+  });
 
   const createMutation = useMutation({
     mutationFn: createEvent,
@@ -168,7 +196,47 @@ export function AppShell() {
     onError: (error) => toast.error(error.message),
   });
 
+  const saveTopicMutation = useMutation({
+    mutationFn: ({ topic, payload }: { topic: ContentTopic | null; payload: TopicPayload }) =>
+      topic ? updateTopic(topic.id, payload) : createTopic(payload),
+    onSuccess: async () => {
+      await invalidateTopics();
+      toast.success("Topic saved.");
+    },
+    onError: (error) => toast.error(error.message),
+  });
+
+  const saveDraftMutation = useMutation({
+    mutationFn: ({ draft, payload }: { draft: ContentDraft | null; payload: DraftPayload }) =>
+      draft ? updateDraft(draft.id, payload) : createDraft(payload),
+    onSuccess: async () => {
+      await Promise.all([invalidateDrafts(), invalidateTopics()]);
+      toast.success("Draft saved.");
+    },
+    onError: (error) => toast.error(error.message),
+  });
+
+  const daggerMutation = useMutation({
+    mutationFn: toggleDraftDagger,
+    onSuccess: async () => {
+      await invalidateDrafts();
+    },
+    onError: (error) => toast.error(error.message),
+  });
+
+  const assignDraftMutation = useMutation({
+    mutationFn: ({ draft, payload }: { draft: ContentDraft; payload: { publish_at: string; status: string; name?: string } }) =>
+      assignDraftToEvent(draft.id, payload),
+    onSuccess: async () => {
+      await Promise.all([invalidateDrafts(), invalidateEvents()]);
+      toast.success("Draft assigned to calendar.");
+    },
+    onError: (error) => toast.error(error.message),
+  });
+
   const events = eventsQuery.data ?? [];
+  const topics = topicsQuery.data ?? [];
+  const drafts = draftsQuery.data ?? [];
 
   const openNewEvent = (prefilledDate = new Date()) => {
     if (!canEdit) {
@@ -268,7 +336,7 @@ export function AppShell() {
       <main className="relative z-10 mx-auto max-w-[1600px] px-4 py-5 lg:px-6">
         <Tabs defaultValue="calendar" className="space-y-4">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <TabsList className="grid w-full grid-cols-2 rounded-sm border border-border bg-muted/40 lg:w-[280px]">
+            <TabsList className="grid w-full grid-cols-3 rounded-sm border border-border bg-muted/40 lg:w-[420px]">
               <TabsTrigger
                 value="calendar"
                 className="rounded-sm font-mono text-xs uppercase tracking-[0.14em]"
@@ -281,11 +349,17 @@ export function AppShell() {
               >
                 List
               </TabsTrigger>
+              <TabsTrigger
+                value="drafts"
+                className="rounded-sm font-mono text-xs uppercase tracking-[0.14em]"
+              >
+                Drafts
+              </TabsTrigger>
             </TabsList>
             <div className="font-mono text-xs uppercase tracking-[0.16em] text-muted-foreground">
-              {eventsQuery.isFetching
-                ? "Syncing events"
-                : `${events.length} events loaded`}
+              {eventsQuery.isFetching || draftsQuery.isFetching
+                ? "Syncing content"
+                : `${events.length} events / ${drafts.length} drafts`}
             </div>
           </div>
 
@@ -305,6 +379,31 @@ export function AppShell() {
           <TabsContent value="list" className="m-0 space-y-0">
             <Filters filters={filters} onChange={setFilters} />
             <EventsTable events={events} onSelectEvent={openExistingEvent} />
+          </TabsContent>
+
+          <TabsContent value="drafts" className="m-0">
+            <DraftsView
+              topics={topics}
+              drafts={drafts}
+              canEdit={canEdit}
+              saving={
+                saveTopicMutation.isPending ||
+                saveDraftMutation.isPending ||
+                assignDraftMutation.isPending
+              }
+              onSaveTopic={async (topic, payload) => {
+                await saveTopicMutation.mutateAsync({ topic, payload });
+              }}
+              onSaveDraft={async (draft, payload) => {
+                await saveDraftMutation.mutateAsync({ draft, payload });
+              }}
+              onToggleDagger={async (draft) => {
+                await daggerMutation.mutateAsync(draft);
+              }}
+              onAssignDraft={async (draft, payload) => {
+                await assignDraftMutation.mutateAsync({ draft, payload });
+              }}
+            />
           </TabsContent>
         </Tabs>
       </main>

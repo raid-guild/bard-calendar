@@ -10,6 +10,8 @@ export type PublishingEvent = {
   draft_url: string | null;
   media_url: string | null;
   live_url: string | null;
+  topic_id: string | null;
+  draft_id: string | null;
   notes: string | null;
   metadata: Record<string, unknown>;
   external_source: string | null;
@@ -29,6 +31,8 @@ export type EventPayload = {
   draft_url?: string | null;
   media_url?: string | null;
   live_url?: string | null;
+  topic_id?: string | null;
+  draft_id?: string | null;
   notes?: string | null;
   metadata?: Record<string, unknown>;
 };
@@ -41,4 +45,6 @@ export type EventFilters = {
   owner?: string;
   name?: string;
   search?: string;
+  topic_id?: string;
+  draft_id?: string;
 };

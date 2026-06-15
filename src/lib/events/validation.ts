@@ -31,6 +31,8 @@ export const eventCreateSchema = z.object({
   draft_url: optionalUrl,
   media_url: optionalUrl,
   live_url: optionalUrl,
+  topic_id: optionalText,
+  draft_id: optionalText,
   notes: optionalText,
   metadata: metadataSchema.optional().default({}),
   external_source: optionalText,
@@ -49,6 +51,8 @@ export const eventListQuerySchema = z.object({
   owner: z.string().trim().optional(),
   name: z.string().trim().optional(),
   search: z.string().trim().optional(),
+  topic_id: z.string().trim().optional(),
+  draft_id: z.string().trim().optional(),
 });
 
 export const agentCreateSchema = eventCreateSchema;
