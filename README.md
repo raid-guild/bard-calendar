@@ -1,6 +1,6 @@
 # RaidGuild Content Calendar
 
-Lightweight internal social content calendar for RaidGuild publishing plans, drafts, media links, statuses, channel targets, and agent-created events.
+Social content calendar for RaidGuild publishing plans, drafts, media links, statuses, channel targets, and agent-created events.
 
 The app is a Next.js App Router build using the `system-weaver` RaidGuild visual system: dark operational UI, compact shadcn controls, Space Grotesk headings, Inter body text, JetBrains Mono labels, teal primary actions, and sharp 4px radii.
 
