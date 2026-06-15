@@ -254,6 +254,27 @@ export function AppShell() {
     setDrawerOpen(true);
   };
 
+  const openAssignedDraftEvent = async (draft: ContentDraft) => {
+    if (!draft.assigned_event_id) {
+      return;
+    }
+
+    const loadedEvent = events.find((event) => event.id === draft.assigned_event_id);
+    const event =
+      loadedEvent ??
+      (await fetchEvents({ draft_id: draft.id }).then((matches) =>
+        matches.find((match) => match.id === draft.assigned_event_id),
+      ));
+
+    if (!event) {
+      toast.error("Linked event not found.");
+      return;
+    }
+
+    setDate(new Date(event.publish_at));
+    openExistingEvent(event);
+  };
+
   const saveEvent = async (payload: EventPayload) => {
     if (!canEdit) {
       return;
@@ -403,6 +424,7 @@ export function AppShell() {
               onAssignDraft={async (draft, payload) => {
                 await assignDraftMutation.mutateAsync({ draft, payload });
               }}
+              onOpenAssignedEvent={openAssignedDraftEvent}
             />
           </TabsContent>
         </Tabs>
