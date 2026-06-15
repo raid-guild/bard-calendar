@@ -1,0 +1,24 @@
+import { NextRequest, NextResponse } from "next/server";
+import { isAuthorizedAgentRequest } from "@/lib/api-auth";
+import { upsertTopic } from "@/lib/content/queries";
+import { agentTopicUpsertSchema } from "@/lib/content/validation";
+
+export async function PUT(request: NextRequest) {
+  if (!isAuthorizedAgentRequest(request)) {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
+
+  const body = await request.json().catch(() => null);
+  const parsed = agentTopicUpsertSchema.safeParse(body);
+
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Invalid request.", details: parsed.error.flatten() }, { status: 400 });
+  }
+
+  const topic = await upsertTopic({
+    ...parsed.data,
+    external_source: parsed.data.external_source,
+    external_id: parsed.data.external_id,
+  });
+  return NextResponse.json({ topic });
+}

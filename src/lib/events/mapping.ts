@@ -13,6 +13,8 @@ export type PublishingEvent = {
   draft_url: string | null;
   media_url: string | null;
   live_url: string | null;
+  topic_id: string | null;
+  draft_id: string | null;
   notes: string | null;
   metadata: Record<string, unknown>;
   external_source: string | null;
@@ -38,6 +40,8 @@ export function mapRowToEvent(row: PublishingEventRow): PublishingEvent {
     draft_url: row.draftUrl,
     media_url: row.mediaUrl,
     live_url: row.liveUrl,
+    topic_id: row.topicId,
+    draft_id: row.draftId,
     notes: row.notes,
     metadata: (row.metadataJson ?? {}) as Record<string, unknown>,
     external_source: row.externalSource,
@@ -62,6 +66,8 @@ export function mapCreateInputToRow(input: EventCreateInput): NewPublishingEvent
     draftUrl: input.draft_url,
     mediaUrl: input.media_url,
     liveUrl: input.live_url,
+    topicId: input.topic_id,
+    draftId: input.draft_id,
     notes: input.notes,
     metadataJson: input.metadata ?? {},
     externalSource: input.external_source,
@@ -83,6 +89,8 @@ export function mapUpdateInputToRow(input: EventUpdateInput) {
     ...(input.draft_url !== undefined ? { draftUrl: input.draft_url } : {}),
     ...(input.media_url !== undefined ? { mediaUrl: input.media_url } : {}),
     ...(input.live_url !== undefined ? { liveUrl: input.live_url } : {}),
+    ...(input.topic_id !== undefined ? { topicId: input.topic_id } : {}),
+    ...(input.draft_id !== undefined ? { draftId: input.draft_id } : {}),
     ...(input.notes !== undefined ? { notes: input.notes } : {}),
     ...(input.metadata !== undefined ? { metadataJson: input.metadata } : {}),
     ...(input.external_source !== undefined ? { externalSource: input.external_source } : {}),

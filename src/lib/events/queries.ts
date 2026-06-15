@@ -12,6 +12,8 @@ export async function listEvents(filters: EventListQuery = {}) {
     filters.target_channel ? eq(publishingEvents.targetChannel, filters.target_channel) : undefined,
     filters.status ? eq(publishingEvents.status, filters.status) : undefined,
     filters.owner ? eq(publishingEvents.owner, filters.owner) : undefined,
+    filters.topic_id ? eq(publishingEvents.topicId, filters.topic_id) : undefined,
+    filters.draft_id ? eq(publishingEvents.draftId, filters.draft_id) : undefined,
     filters.name ? ilike(publishingEvents.name, `%${filters.name}%`) : undefined,
     filters.search
       ? or(
@@ -82,6 +84,8 @@ export async function upsertEvent(input: EventCreateInput & { external_source: s
         draftUrl: input.draft_url,
         mediaUrl: input.media_url,
         liveUrl: input.live_url,
+        topicId: input.topic_id,
+        draftId: input.draft_id,
         notes: input.notes,
         metadataJson: input.metadata ?? {},
         externalSource: input.external_source,
