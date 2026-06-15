@@ -1,7 +1,16 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { CalendarPlus, ExternalLink, FileText, Pencil, Plus, Save } from "lucide-react";
+import {
+  CalendarCheck,
+  CalendarPlus,
+  ExternalLink,
+  Eye,
+  Plus,
+  Save,
+  Search,
+  StickyNote,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -25,7 +34,10 @@ type DraftsViewProps = {
   onSaveDraft: (draft: ContentDraft | null, payload: DraftPayload) => Promise<void>;
   onToggleDagger: (draft: ContentDraft) => Promise<void>;
   onAssignDraft: (draft: ContentDraft, payload: { publish_at: string; status: string; name?: string }) => Promise<void>;
+  onOpenAssignedEvent: (draft: ContentDraft) => Promise<void>;
 };
+
+type DraftSort = "created-asc" | "created-desc" | "title-asc" | "title-desc" | "publish-at";
 
 type TopicForm = {
   title: string;
@@ -75,6 +87,7 @@ export function DraftsView({
   onSaveDraft,
   onToggleDagger,
   onAssignDraft,
+  onOpenAssignedEvent,
 }: DraftsViewProps) {
   const [editingTopic, setEditingTopic] = useState<ContentTopic | null>(null);
   const [topicOpen, setTopicOpen] = useState(false);
@@ -84,16 +97,72 @@ export function DraftsView({
   const [draftState, setDraftState] = useState<DraftForm>(() => draftForm(null, ""));
   const [assigningDraft, setAssigningDraft] = useState<ContentDraft | null>(null);
   const [assignAt, setAssignAt] = useState(() => toDatetimeLocalValue(new Date()));
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sort, setSort] = useState<DraftSort>("created-asc");
+
+  const filteredTopics = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+
+    return topics.filter((topic) => {
+      if (!query) {
+        return true;
+      }
+
+      if (topic.title.toLowerCase().includes(query)) {
+        return true;
+      }
+
+      return drafts.some((draft) => draft.topic_id === topic.id && draft.title.toLowerCase().includes(query));
+    });
+  }, [drafts, searchQuery, topics]);
 
   const draftsByTopic = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
     const grouped = new Map<string, ContentDraft[]>();
 
     for (const draft of drafts) {
+      const topic = topics.find((candidate) => candidate.id === draft.topic_id);
+      const topicMatches = topic?.title.toLowerCase().includes(query) ?? false;
+      const draftMatches = draft.title.toLowerCase().includes(query);
+
+      if (query && !topicMatches && !draftMatches) {
+        continue;
+      }
+
       grouped.set(draft.topic_id, [...(grouped.get(draft.topic_id) ?? []), draft]);
     }
 
+    grouped.forEach((topicDrafts, topicId) => {
+      grouped.set(topicId, [...topicDrafts].sort((first, second) => {
+        if (sort === "created-desc") {
+          return new Date(second.created_at).getTime() - new Date(first.created_at).getTime();
+        }
+
+        if (sort === "title-asc") {
+          return first.title.localeCompare(second.title);
+        }
+
+        if (sort === "title-desc") {
+          return second.title.localeCompare(first.title);
+        }
+
+        if (sort === "publish-at") {
+          const firstTime = first.assigned_publish_at ? new Date(first.assigned_publish_at).getTime() : Number.MAX_SAFE_INTEGER;
+          const secondTime = second.assigned_publish_at ? new Date(second.assigned_publish_at).getTime() : Number.MAX_SAFE_INTEGER;
+          return firstTime - secondTime || first.title.localeCompare(second.title);
+        }
+
+        return new Date(first.created_at).getTime() - new Date(second.created_at).getTime();
+      }));
+    });
+
     return grouped;
-  }, [drafts]);
+  }, [drafts, searchQuery, sort, topics]);
+
+  const filteredDraftCount = useMemo(
+    () => filteredTopics.reduce((count, topic) => count + (draftsByTopic.get(topic.id)?.length ?? 0), 0),
+    [draftsByTopic, filteredTopics],
+  );
 
   useEffect(() => {
     if (!topicOpen) {
@@ -164,7 +233,9 @@ export function DraftsView({
     <div className="grid gap-4">
       <div className="flex items-center justify-between gap-3">
         <div className="font-mono text-xs uppercase tracking-[0.16em] text-muted-foreground">
-          {topics.length} topics / {drafts.length} drafts
+          {searchQuery.trim()
+            ? `${filteredTopics.length} of ${topics.length} topics / ${filteredDraftCount} of ${drafts.length} drafts`
+            : `${topics.length} topics / ${drafts.length} drafts`}
         </div>
         {canEdit ? (
           <Button className="rounded-sm" onClick={openNewTopic}>
@@ -174,35 +245,56 @@ export function DraftsView({
         ) : null}
       </div>
 
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <div className="relative flex-1">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            className="rounded-sm pl-9"
+            placeholder="Search names"
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+          />
+        </div>
+        <Select value={sort} onValueChange={(value) => setSort(value as DraftSort)}>
+          <SelectTrigger className="rounded-sm sm:w-48">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="created-asc">Created: oldest</SelectItem>
+            <SelectItem value="created-desc">Created: newest</SelectItem>
+            <SelectItem value="title-asc">Name: A-Z</SelectItem>
+            <SelectItem value="title-desc">Name: Z-A</SelectItem>
+            <SelectItem value="publish-at">Publish date</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
       <div className="overflow-hidden border border-border bg-card/60">
         {topics.length === 0 ? (
           <div className="flex h-40 items-center justify-center text-sm text-muted-foreground">No topics yet.</div>
+        ) : filteredTopics.length === 0 ? (
+          <div className="flex h-40 items-center justify-center text-sm text-muted-foreground">No matching topics or drafts.</div>
         ) : (
-          topics.map((topic) => {
+          filteredTopics.map((topic) => {
             const topicDrafts = draftsByTopic.get(topic.id) ?? [];
 
             return (
               <section key={topic.id} className="border-b border-border last:border-b-0">
-                <div className="flex flex-col gap-3 px-4 py-4 lg:flex-row lg:items-start lg:justify-between">
-                  <div className="min-w-0 space-y-2">
+                <div className="flex flex-col gap-3 px-4 py-2.5 lg:flex-row lg:items-center lg:justify-between">
+                  <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
                       <h2 className="font-heading text-lg">{topic.title}</h2>
                       <span className="rounded-sm border border-border px-2 py-0.5 font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
                         {topic.status}
                       </span>
                     </div>
-                    {topic.supporting_material_markdown ? (
-                      <p className="max-w-4xl whitespace-pre-wrap text-sm text-muted-foreground">
-                        {topic.supporting_material_markdown.slice(0, 320)}
-                        {topic.supporting_material_markdown.length > 320 ? "..." : ""}
-                      </p>
-                    ) : null}
                   </div>
                   {canEdit ? (
                     <div className="flex shrink-0 gap-2">
-                      <Button variant="outline" size="sm" className="rounded-sm" onClick={() => openNewDraft(topic.id)}>
-                        <FileText className="h-4 w-4" />
-                        Draft
+                      <Button variant="outline" size="icon" className="relative h-9 w-9 rounded-sm" onClick={() => openNewDraft(topic.id)}>
+                        <StickyNote className="h-4 w-4" />
+                        <Plus className="absolute right-1 top-1 h-2.5 w-2.5" />
+                        <span className="sr-only">New draft</span>
                       </Button>
                       <Button
                         variant="ghost"
@@ -213,8 +305,8 @@ export function DraftsView({
                           setTopicOpen(true);
                         }}
                       >
-                        <Pencil className="h-4 w-4" />
-                        <span className="sr-only">Edit topic</span>
+                        <Eye className="h-4 w-4" />
+                        <span className="sr-only">View/edit topic</span>
                       </Button>
                     </div>
                   ) : null}
@@ -225,8 +317,8 @@ export function DraftsView({
                     <div className="px-4 py-5 text-sm text-muted-foreground">No drafts for this topic.</div>
                   ) : (
                     topicDrafts.map((draft) => (
-                      <div key={draft.id} className="grid gap-3 px-4 py-3 lg:grid-cols-[1fr_auto] lg:items-center">
-                        <div className="min-w-0 space-y-2">
+                      <div key={draft.id} className="grid gap-3 px-4 py-2 lg:grid-cols-[1fr_auto] lg:items-center">
+                        <div className="min-w-0">
                           <div className="flex flex-wrap items-center gap-2">
                             <span className="font-medium">{draft.title}</span>
                             <ChannelBadge channel={draft.target_channel} />
@@ -237,9 +329,6 @@ export function DraftsView({
                               </span>
                             ) : null}
                           </div>
-                          <p className="line-clamp-2 max-w-5xl whitespace-pre-wrap text-sm text-muted-foreground">
-                            {draft.markdown_content || "-"}
-                          </p>
                         </div>
                         <div className="flex flex-wrap items-center gap-2 lg:justify-end">
                           <Button
@@ -266,13 +355,18 @@ export function DraftsView({
                                 variant="outline"
                                 size="icon"
                                 className="h-9 w-9 rounded-sm"
-                                onClick={() => {
+                                onClick={async () => {
+                                  if (draft.assigned_event_id) {
+                                    await onOpenAssignedEvent(draft);
+                                    return;
+                                  }
+
                                   setAssigningDraft(draft);
                                   setAssignAt(toDatetimeLocalValue(draft.assigned_publish_at ?? new Date()));
                                 }}
                               >
-                                <CalendarPlus className="h-4 w-4" />
-                                <span className="sr-only">Assign to calendar</span>
+                                {draft.assigned_event_id ? <CalendarCheck className="h-4 w-4" /> : <CalendarPlus className="h-4 w-4" />}
+                                <span className="sr-only">{draft.assigned_event_id ? "Open linked event" : "Assign to calendar"}</span>
                               </Button>
                               <Button
                                 variant="ghost"
@@ -283,8 +377,8 @@ export function DraftsView({
                                   setDraftOpen(true);
                                 }}
                               >
-                                <Pencil className="h-4 w-4" />
-                                <span className="sr-only">Edit draft</span>
+                                <Eye className="h-4 w-4" />
+                                <span className="sr-only">View/edit draft</span>
                               </Button>
                             </>
                           ) : null}
@@ -300,7 +394,7 @@ export function DraftsView({
       </div>
 
       <Dialog open={topicOpen} onOpenChange={setTopicOpen}>
-        <DialogContent className="border-border bg-background sm:max-w-2xl">
+        <DialogContent className="border-border bg-background sm:max-w-4xl">
           <form onSubmit={saveTopic} className="space-y-5">
             <DialogHeader>
               <DialogTitle>{editingTopic ? "Edit topic" : "New topic"}</DialogTitle>
@@ -320,7 +414,7 @@ export function DraftsView({
             </div>
             <div className="grid gap-2">
               <Label htmlFor="topic-material">Supporting material</Label>
-              <Textarea id="topic-material" className="min-h-48 font-mono text-xs" value={topicState.supporting_material_markdown} onChange={(event) => setTopicState((current) => ({ ...current, supporting_material_markdown: event.target.value }))} />
+              <Textarea id="topic-material" className="min-h-72 font-mono text-xs" value={topicState.supporting_material_markdown} onChange={(event) => setTopicState((current) => ({ ...current, supporting_material_markdown: event.target.value }))} />
             </div>
             <DialogFooter>
               <Button type="submit" className="rounded-sm" disabled={saving}><Save className="h-4 w-4" />Save topic</Button>
@@ -330,7 +424,7 @@ export function DraftsView({
       </Dialog>
 
       <Dialog open={draftOpen} onOpenChange={setDraftOpen}>
-        <DialogContent className="border-border bg-background sm:max-w-3xl">
+        <DialogContent className="border-border bg-background sm:max-w-5xl">
           <form onSubmit={saveDraft} className="space-y-5">
             <DialogHeader>
               <DialogTitle>{editingDraft ? "Edit draft" : "New draft"}</DialogTitle>
@@ -370,8 +464,8 @@ export function DraftsView({
             </div>
             <div className="grid gap-2">
               <Label htmlFor="draft-copy">Markdown content</Label>
-              <ScrollArea className="h-72 rounded-sm border border-input">
-                <Textarea id="draft-copy" className="min-h-72 resize-none border-0 font-mono text-xs focus-visible:ring-0" value={draftState.markdown_content} onChange={(event) => setDraftState((current) => ({ ...current, markdown_content: event.target.value }))} />
+              <ScrollArea className="h-[26rem] rounded-sm border border-input">
+                <Textarea id="draft-copy" className="min-h-[26rem] resize-none border-0 font-mono text-xs focus-visible:ring-0" value={draftState.markdown_content} onChange={(event) => setDraftState((current) => ({ ...current, markdown_content: event.target.value }))} />
               </ScrollArea>
             </div>
             <DialogFooter>
