@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   CalendarCheck,
   CalendarPlus,
+  ChevronRight,
   LayersPlus,
   ExternalLink,
   Eye,
@@ -12,6 +13,11 @@ import {
   Search,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import {
   Dialog,
   DialogContent,
@@ -146,6 +152,9 @@ export function DraftsView({
   const [sort, setSort] = useState<DraftSort>("created-asc");
   const [topicStatusView, setTopicStatusView] =
     useState<TopicStatus>("active");
+  const [expandedTopicIds, setExpandedTopicIds] = useState<Set<string>>(
+    () => new Set(),
+  );
 
   const statusTopics = useMemo(
     () => topics.filter((topic) => topic.status === topicStatusView),
@@ -321,6 +330,20 @@ export function DraftsView({
     setAssigningDraft(null);
   };
 
+  const toggleTopic = (topicId: string) => {
+    setExpandedTopicIds((current) => {
+      const next = new Set(current);
+
+      if (next.has(topicId)) {
+        next.delete(topicId);
+      } else {
+        next.add(topicId);
+      }
+
+      return next;
+    });
+  };
+
   return (
     <div className="grid gap-4">
       <div className="flex items-center justify-between gap-3">
@@ -405,163 +428,188 @@ export function DraftsView({
         ) : (
           filteredTopics.map((topic) => {
             const topicDrafts = draftsByTopic.get(topic.id) ?? [];
+            const isExpanded = expandedTopicIds.has(topic.id);
 
             return (
-              <section
+              <Collapsible
                 key={topic.id}
-                className="border-b border-border last:border-b-0"
+                asChild
+                open={isExpanded}
+                onOpenChange={() => toggleTopic(topic.id)}
               >
-                <div className="flex flex-col gap-3 px-4 py-2.5 lg:flex-row lg:items-center lg:justify-between">
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h2 className="font-heading text-lg">{topic.title}</h2>
-                      <span className="rounded-sm border border-border px-2 py-0.5 font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
-                        {topic.status}
-                      </span>
-                    </div>
-                  </div>
-                  {canEdit ? (
-                    <div className="flex shrink-0 gap-2">
-                      {topic.status === "active" ? (
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className="relative h-9 w-9 rounded-sm"
-                          onClick={() => openNewDraft(topic.id)}
+                <section className="border-b border-border last:border-b-0">
+                  <div className="flex flex-col gap-3 px-4 py-2.5 lg:flex-row lg:items-center lg:justify-between">
+                    <div className="min-w-0">
+                      <CollapsibleTrigger asChild>
+                        <button
+                          type="button"
+                          className="group flex min-w-0 items-center gap-2 text-left"
+                          aria-label={`${isExpanded ? "Collapse" : "Expand"} ${topic.title} drafts`}
                         >
-                          <LayersPlus className="h-4 w-4" />
-                          <span className="sr-only">New draft</span>
-                        </Button>
-                      ) : null}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-9 w-9 rounded-sm"
-                        onClick={() => {
-                          setEditingTopic(topic);
-                          setTopicOpen(true);
-                        }}
-                      >
-                        <Eye className="h-4 w-4" />
-                        <span className="sr-only">View/edit topic</span>
-                      </Button>
-                    </div>
-                  ) : null}
-                </div>
-
-                <div className="border-t border-border px-4 py-3">
-                  {topicDrafts.length === 0 ? (
-                    <div className="pl-4 text-sm text-muted-foreground lg:ml-6 lg:pl-5">
-                      No drafts for this topic.
-                    </div>
-                  ) : (
-                    <div className="divide-y divide-border/70 lg:ml-6">
-                      {topicDrafts.map((draft) => (
-                        <div
-                          key={draft.id}
-                          className="grid gap-3 bg-background/25 px-4 py-2.5 lg:grid-cols-[1fr_auto] lg:items-center lg:pl-5"
-                        >
-                          <div className="min-w-0">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <span className="text-sm font-medium text-foreground/90">
-                                {draft.title}
+                          <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-data-[state=open]:rotate-90" />
+                          <span className="min-w-0">
+                            <span className="flex flex-wrap items-center gap-2">
+                              <span className="font-heading text-lg">
+                                {topic.title}
                               </span>
-                              <ChannelBadge channel={draft.target_channel} />
-                              <StatusBadge status={draft.status as never} />
-                              {draft.assigned_publish_at ? (
-                                <span className="font-mono text-xs text-muted-foreground">
-                                  {formatDateTime(draft.assigned_publish_at)}
-                                </span>
-                              ) : null}
-                            </div>
-                          </div>
-                          <div className="flex flex-wrap items-center gap-2 lg:justify-end">
-                            <Button
-                              variant={
-                                draft.user_has_dagger ? "default" : "outline"
-                              }
-                              size="sm"
-                              className="rounded-sm"
-                              disabled={!canEdit}
-                              onClick={() => onToggleDagger(draft)}
-                            >
-                              <span aria-hidden>🗡️</span>
-                              {draft.dagger_count}
-                            </Button>
-                            {draft.external_draft_url ? (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-9 w-9 rounded-sm"
-                                asChild
-                              >
-                                <a
-                                  href={draft.external_draft_url}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                >
-                                  <ExternalLink className="h-4 w-4" />
-                                  <span className="sr-only">
-                                    Open external draft
-                                  </span>
-                                </a>
-                              </Button>
-                            ) : null}
-                            {canEdit ? (
-                              <>
-                                <Button
-                                  variant="outline"
-                                  size="icon"
-                                  className="h-9 w-9 rounded-sm"
-                                  onClick={async () => {
-                                    if (draft.assigned_event_id) {
-                                      await onOpenAssignedEvent(draft);
-                                      return;
-                                    }
+                              <span className="rounded-sm border border-border px-2 py-0.5 font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
+                                {topic.status}
+                              </span>
+                              <span className="rounded-sm bg-muted px-2 py-0.5 font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
+                                {topicDrafts.length}{" "}
+                                {topicDrafts.length === 1
+                                  ? "draft"
+                                  : "drafts"}
+                              </span>
+                            </span>
+                          </span>
+                        </button>
+                      </CollapsibleTrigger>
+                    </div>
+                    {canEdit ? (
+                      <div className="flex shrink-0 gap-2">
+                        {topic.status === "active" ? (
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="relative h-9 w-9 rounded-sm"
+                            onClick={() => openNewDraft(topic.id)}
+                          >
+                            <LayersPlus className="h-4 w-4" />
+                            <span className="sr-only">New draft</span>
+                          </Button>
+                        ) : null}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-9 w-9 rounded-sm"
+                          onClick={() => {
+                            setEditingTopic(topic);
+                            setTopicOpen(true);
+                          }}
+                        >
+                          <Eye className="h-4 w-4" />
+                          <span className="sr-only">View/edit topic</span>
+                        </Button>
+                      </div>
+                    ) : null}
+                  </div>
 
-                                    setAssigningDraft(draft);
-                                    setAssignAt(
-                                      toDatetimeLocalValue(
-                                        draft.assigned_publish_at ?? new Date(),
-                                      ),
-                                    );
-                                  }}
-                                >
-                                  {draft.assigned_event_id ? (
-                                    <CalendarCheck className="h-4 w-4" />
-                                  ) : (
-                                    <CalendarPlus className="h-4 w-4" />
-                                  )}
-                                  <span className="sr-only">
-                                    {draft.assigned_event_id
-                                      ? "Open linked event"
-                                      : "Assign to calendar"}
+                  <CollapsibleContent className="border-t border-border px-4 py-3">
+                    {topicDrafts.length === 0 ? (
+                      <div className="pl-4 text-sm text-muted-foreground lg:ml-6 lg:pl-5">
+                        No drafts for this topic.
+                      </div>
+                    ) : (
+                      <div className="divide-y divide-border/70 lg:ml-6">
+                        {topicDrafts.map((draft) => (
+                          <div
+                            key={draft.id}
+                            className="grid gap-3 bg-background/25 px-4 py-2.5 lg:grid-cols-[1fr_auto] lg:items-center lg:pl-5"
+                          >
+                            <div className="min-w-0">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="text-sm font-medium text-foreground/90">
+                                  {draft.title}
+                                </span>
+                                <ChannelBadge channel={draft.target_channel} />
+                                <StatusBadge status={draft.status as never} />
+                                {draft.assigned_publish_at ? (
+                                  <span className="font-mono text-xs text-muted-foreground">
+                                    {formatDateTime(draft.assigned_publish_at)}
                                   </span>
-                                </Button>
+                                ) : null}
+                              </div>
+                            </div>
+                            <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+                              <Button
+                                variant={
+                                  draft.user_has_dagger ? "default" : "outline"
+                                }
+                                size="sm"
+                                className="rounded-sm"
+                                disabled={!canEdit}
+                                onClick={() => onToggleDagger(draft)}
+                              >
+                                <span aria-hidden>🗡️</span>
+                                {draft.dagger_count}
+                              </Button>
+                              {draft.external_draft_url ? (
                                 <Button
                                   variant="ghost"
                                   size="icon"
                                   className="h-9 w-9 rounded-sm"
-                                  onClick={() => {
-                                    setNewDraftTopicId(null);
-                                    setEditingDraft(draft);
-                                    setDraftOpen(true);
-                                  }}
+                                  asChild
                                 >
-                                  <Eye className="h-4 w-4" />
-                                  <span className="sr-only">
-                                    View/edit draft
-                                  </span>
+                                  <a
+                                    href={draft.external_draft_url}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                  >
+                                    <ExternalLink className="h-4 w-4" />
+                                    <span className="sr-only">
+                                      Open external draft
+                                    </span>
+                                  </a>
                                 </Button>
-                              </>
-                            ) : null}
+                              ) : null}
+                              {canEdit ? (
+                                <>
+                                  <Button
+                                    variant="outline"
+                                    size="icon"
+                                    className="h-9 w-9 rounded-sm"
+                                    onClick={async () => {
+                                      if (draft.assigned_event_id) {
+                                        await onOpenAssignedEvent(draft);
+                                        return;
+                                      }
+
+                                      setAssigningDraft(draft);
+                                      setAssignAt(
+                                        toDatetimeLocalValue(
+                                          draft.assigned_publish_at ??
+                                            new Date(),
+                                        ),
+                                      );
+                                    }}
+                                  >
+                                    {draft.assigned_event_id ? (
+                                      <CalendarCheck className="h-4 w-4" />
+                                    ) : (
+                                      <CalendarPlus className="h-4 w-4" />
+                                    )}
+                                    <span className="sr-only">
+                                      {draft.assigned_event_id
+                                        ? "Open linked event"
+                                        : "Assign to calendar"}
+                                    </span>
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-9 w-9 rounded-sm"
+                                    onClick={() => {
+                                      setNewDraftTopicId(null);
+                                      setEditingDraft(draft);
+                                      setDraftOpen(true);
+                                    }}
+                                  >
+                                    <Eye className="h-4 w-4" />
+                                    <span className="sr-only">
+                                      View/edit draft
+                                    </span>
+                                  </Button>
+                                </>
+                              ) : null}
+                            </div>
                           </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </section>
+                        ))}
+                      </div>
+                    )}
+                  </CollapsibleContent>
+                </section>
+              </Collapsible>
             );
           })
         )}
