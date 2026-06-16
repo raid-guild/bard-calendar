@@ -312,79 +312,81 @@ export function DraftsView({
                   ) : null}
                 </div>
 
-                <div className="divide-y divide-border border-t border-border">
+                <div className="border-t border-border px-4 py-3">
                   {topicDrafts.length === 0 ? (
-                    <div className="px-4 py-5 text-sm text-muted-foreground">No drafts for this topic.</div>
+                    <div className="border-l border-border/80 pl-4 text-sm text-muted-foreground lg:ml-6 lg:pl-5">No drafts for this topic.</div>
                   ) : (
-                    topicDrafts.map((draft) => (
-                      <div key={draft.id} className="grid gap-3 px-4 py-2 lg:grid-cols-[1fr_auto] lg:items-center">
-                        <div className="min-w-0">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className="font-medium">{draft.title}</span>
-                            <ChannelBadge channel={draft.target_channel} />
-                            <StatusBadge status={draft.status as never} />
-                            {draft.assigned_publish_at ? (
-                              <span className="font-mono text-xs text-muted-foreground">
-                                {formatDateTime(draft.assigned_publish_at)}
-                              </span>
+                    <div className="divide-y divide-border/70 border-l border-border/80 lg:ml-6">
+                      {topicDrafts.map((draft) => (
+                        <div key={draft.id} className="grid gap-3 bg-background/25 px-4 py-2.5 lg:grid-cols-[1fr_auto] lg:items-center lg:pl-5">
+                          <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="text-sm font-medium text-foreground/90">{draft.title}</span>
+                              <ChannelBadge channel={draft.target_channel} />
+                              <StatusBadge status={draft.status as never} />
+                              {draft.assigned_publish_at ? (
+                                <span className="font-mono text-xs text-muted-foreground">
+                                  {formatDateTime(draft.assigned_publish_at)}
+                                </span>
+                              ) : null}
+                            </div>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+                            <Button
+                              variant={draft.user_has_dagger ? "default" : "outline"}
+                              size="sm"
+                              className="rounded-sm"
+                              disabled={!canEdit}
+                              onClick={() => onToggleDagger(draft)}
+                            >
+                              <span aria-hidden>🗡️</span>
+                              {draft.dagger_count}
+                            </Button>
+                            {draft.external_draft_url ? (
+                              <Button variant="ghost" size="icon" className="h-9 w-9 rounded-sm" asChild>
+                                <a href={draft.external_draft_url} target="_blank" rel="noreferrer">
+                                  <ExternalLink className="h-4 w-4" />
+                                  <span className="sr-only">Open external draft</span>
+                                </a>
+                              </Button>
+                            ) : null}
+                            {canEdit ? (
+                              <>
+                                <Button
+                                  variant="outline"
+                                  size="icon"
+                                  className="h-9 w-9 rounded-sm"
+                                  onClick={async () => {
+                                    if (draft.assigned_event_id) {
+                                      await onOpenAssignedEvent(draft);
+                                      return;
+                                    }
+
+                                    setAssigningDraft(draft);
+                                    setAssignAt(toDatetimeLocalValue(draft.assigned_publish_at ?? new Date()));
+                                  }}
+                                >
+                                  {draft.assigned_event_id ? <CalendarCheck className="h-4 w-4" /> : <CalendarPlus className="h-4 w-4" />}
+                                  <span className="sr-only">{draft.assigned_event_id ? "Open linked event" : "Assign to calendar"}</span>
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-9 w-9 rounded-sm"
+                                  onClick={() => {
+                                    setEditingDraft(draft);
+                                    setDraftOpen(true);
+                                  }}
+                                >
+                                  <Eye className="h-4 w-4" />
+                                  <span className="sr-only">View/edit draft</span>
+                                </Button>
+                              </>
                             ) : null}
                           </div>
                         </div>
-                        <div className="flex flex-wrap items-center gap-2 lg:justify-end">
-                          <Button
-                            variant={draft.user_has_dagger ? "default" : "outline"}
-                            size="sm"
-                            className="rounded-sm"
-                            disabled={!canEdit}
-                            onClick={() => onToggleDagger(draft)}
-                          >
-                            <span aria-hidden>🗡️</span>
-                            {draft.dagger_count}
-                          </Button>
-                          {draft.external_draft_url ? (
-                            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-sm" asChild>
-                              <a href={draft.external_draft_url} target="_blank" rel="noreferrer">
-                                <ExternalLink className="h-4 w-4" />
-                                <span className="sr-only">Open external draft</span>
-                              </a>
-                            </Button>
-                          ) : null}
-                          {canEdit ? (
-                            <>
-                              <Button
-                                variant="outline"
-                                size="icon"
-                                className="h-9 w-9 rounded-sm"
-                                onClick={async () => {
-                                  if (draft.assigned_event_id) {
-                                    await onOpenAssignedEvent(draft);
-                                    return;
-                                  }
-
-                                  setAssigningDraft(draft);
-                                  setAssignAt(toDatetimeLocalValue(draft.assigned_publish_at ?? new Date()));
-                                }}
-                              >
-                                {draft.assigned_event_id ? <CalendarCheck className="h-4 w-4" /> : <CalendarPlus className="h-4 w-4" />}
-                                <span className="sr-only">{draft.assigned_event_id ? "Open linked event" : "Assign to calendar"}</span>
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-9 w-9 rounded-sm"
-                                onClick={() => {
-                                  setEditingDraft(draft);
-                                  setDraftOpen(true);
-                                }}
-                              >
-                                <Eye className="h-4 w-4" />
-                                <span className="sr-only">View/edit draft</span>
-                              </Button>
-                            </>
-                          ) : null}
-                        </div>
-                      </div>
-                    ))
+                      ))}
+                    </div>
                   )}
                 </div>
               </section>
@@ -394,29 +396,31 @@ export function DraftsView({
       </div>
 
       <Dialog open={topicOpen} onOpenChange={setTopicOpen}>
-        <DialogContent className="border-border bg-background sm:max-w-4xl">
-          <form onSubmit={saveTopic} className="space-y-5">
-            <DialogHeader>
+        <DialogContent className="h-dvh max-h-dvh w-screen max-w-none gap-0 border-border bg-background p-0 sm:rounded-none">
+          <form onSubmit={saveTopic} className="flex h-full min-h-0 flex-col">
+            <DialogHeader className="border-b border-border px-6 py-5 pr-14">
               <DialogTitle>{editingTopic ? "Edit topic" : "New topic"}</DialogTitle>
             </DialogHeader>
-            <div className="grid gap-2">
-              <Label htmlFor="topic-title">Title</Label>
-              <Input id="topic-title" value={topicState.title} onChange={(event) => setTopicState((current) => ({ ...current, title: event.target.value }))} required />
+            <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-6 py-5">
+              <div className="grid gap-2">
+                <Label htmlFor="topic-title">Title</Label>
+                <Input id="topic-title" value={topicState.title} onChange={(event) => setTopicState((current) => ({ ...current, title: event.target.value }))} required />
+              </div>
+              <div className="grid gap-2">
+                <Label>Topic status</Label>
+                <Select value={topicState.status} onValueChange={(status) => setTopicState((current) => ({ ...current, status }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {topicStatuses.map((status) => <SelectItem key={status} value={status}>{status}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="topic-material">Supporting material</Label>
+                <Textarea id="topic-material" className="min-h-[55vh] font-mono text-xs" value={topicState.supporting_material_markdown} onChange={(event) => setTopicState((current) => ({ ...current, supporting_material_markdown: event.target.value }))} />
+              </div>
             </div>
-            <div className="grid gap-2">
-              <Label>Topic status</Label>
-              <Select value={topicState.status} onValueChange={(status) => setTopicState((current) => ({ ...current, status }))}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {topicStatuses.map((status) => <SelectItem key={status} value={status}>{status}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="topic-material">Supporting material</Label>
-              <Textarea id="topic-material" className="min-h-72 font-mono text-xs" value={topicState.supporting_material_markdown} onChange={(event) => setTopicState((current) => ({ ...current, supporting_material_markdown: event.target.value }))} />
-            </div>
-            <DialogFooter>
+            <DialogFooter className="border-t border-border px-6 py-4">
               <Button type="submit" className="rounded-sm" disabled={saving}><Save className="h-4 w-4" />Save topic</Button>
             </DialogFooter>
           </form>
@@ -424,51 +428,53 @@ export function DraftsView({
       </Dialog>
 
       <Dialog open={draftOpen} onOpenChange={setDraftOpen}>
-        <DialogContent className="border-border bg-background sm:max-w-5xl">
-          <form onSubmit={saveDraft} className="space-y-5">
-            <DialogHeader>
+        <DialogContent className="h-dvh max-h-dvh w-screen max-w-none gap-0 border-border bg-background p-0 sm:rounded-none">
+          <form onSubmit={saveDraft} className="flex h-full min-h-0 flex-col">
+            <DialogHeader className="border-b border-border px-6 py-5 pr-14">
               <DialogTitle>{editingDraft ? "Edit draft" : "New draft"}</DialogTitle>
             </DialogHeader>
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="grid gap-2">
-                <Label>Topic</Label>
-                <Select value={draftState.topic_id} onValueChange={(topic_id) => setDraftState((current) => ({ ...current, topic_id }))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{topics.map((topic) => <SelectItem key={topic.id} value={topic.id}>{topic.title}</SelectItem>)}</SelectContent>
-                </Select>
+            <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-6 py-5">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="grid gap-2">
+                  <Label>Topic</Label>
+                  <Select value={draftState.topic_id} onValueChange={(topic_id) => setDraftState((current) => ({ ...current, topic_id }))}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>{topics.map((topic) => <SelectItem key={topic.id} value={topic.id}>{topic.title}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-2">
+                  <Label>Channel</Label>
+                  <Select value={draftState.target_channel} onValueChange={(target_channel) => setDraftState((current) => ({ ...current, target_channel }))}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>{targetChannels.map((channel) => <SelectItem key={channel} value={channel}>{channel}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
               </div>
               <div className="grid gap-2">
-                <Label>Channel</Label>
-                <Select value={draftState.target_channel} onValueChange={(target_channel) => setDraftState((current) => ({ ...current, target_channel }))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{targetChannels.map((channel) => <SelectItem key={channel} value={channel}>{channel}</SelectItem>)}</SelectContent>
-                </Select>
+                <Label htmlFor="draft-title">Title</Label>
+                <Input id="draft-title" value={draftState.title} onChange={(event) => setDraftState((current) => ({ ...current, title: event.target.value }))} required />
               </div>
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="draft-title">Title</Label>
-              <Input id="draft-title" value={draftState.title} onChange={(event) => setDraftState((current) => ({ ...current, title: event.target.value }))} required />
-            </div>
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="grid gap-2">
-                <Label>Draft status</Label>
-                <Select value={draftState.status} onValueChange={(status) => setDraftState((current) => ({ ...current, status }))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{draftStatuses.map((status) => <SelectItem key={status} value={status}>{status}</SelectItem>)}</SelectContent>
-                </Select>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="grid gap-2">
+                  <Label>Draft status</Label>
+                  <Select value={draftState.status} onValueChange={(status) => setDraftState((current) => ({ ...current, status }))}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>{draftStatuses.map((status) => <SelectItem key={status} value={status}>{status}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="external-draft">External draft URL</Label>
+                  <Input id="external-draft" type="url" value={draftState.external_draft_url} onChange={(event) => setDraftState((current) => ({ ...current, external_draft_url: event.target.value }))} />
+                </div>
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="external-draft">External draft URL</Label>
-                <Input id="external-draft" type="url" value={draftState.external_draft_url} onChange={(event) => setDraftState((current) => ({ ...current, external_draft_url: event.target.value }))} />
+                <Label htmlFor="draft-copy">Markdown content</Label>
+                <ScrollArea className="h-[55vh] min-h-[24rem] rounded-sm border border-input">
+                  <Textarea id="draft-copy" className="min-h-[55vh] resize-none border-0 font-mono text-xs focus-visible:ring-0" value={draftState.markdown_content} onChange={(event) => setDraftState((current) => ({ ...current, markdown_content: event.target.value }))} />
+                </ScrollArea>
               </div>
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="draft-copy">Markdown content</Label>
-              <ScrollArea className="h-[26rem] rounded-sm border border-input">
-                <Textarea id="draft-copy" className="min-h-[26rem] resize-none border-0 font-mono text-xs focus-visible:ring-0" value={draftState.markdown_content} onChange={(event) => setDraftState((current) => ({ ...current, markdown_content: event.target.value }))} />
-              </ScrollArea>
-            </div>
-            <DialogFooter>
+            <DialogFooter className="border-t border-border px-6 py-4">
               <Button type="submit" className="rounded-sm" disabled={saving || !draftState.topic_id}><Save className="h-4 w-4" />Save draft</Button>
             </DialogFooter>
           </form>

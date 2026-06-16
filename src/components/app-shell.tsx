@@ -2,6 +2,11 @@
 
 import { useMemo, useState } from "react";
 import {
+  ChevronLeft,
+  ChevronRight,
+  Plus,
+} from "lucide-react";
+import {
   addMonths,
   addWeeks,
   endOfMonth,
@@ -22,7 +27,9 @@ import { EventsTable } from "@/components/events-table";
 import { Filters } from "@/components/filters";
 import { PortalLaunchRequired } from "@/components/portal-launch-required";
 import { TopBar } from "@/components/top-bar";
+import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
   createEvent,
   deleteEvent,
@@ -57,6 +64,8 @@ type PortalSessionResponse = {
   canEdit: boolean;
   portalModulesUrl: string;
 };
+
+type WorkspaceTab = "calendar" | "list" | "drafts";
 
 function rangeFor(date: Date, view: View) {
   if (view === "week") {
@@ -114,6 +123,7 @@ export function AppShell() {
   const queryClient = useQueryClient();
   const [date, setDate] = useState(() => new Date());
   const [view, setView] = useState<View>("month");
+  const [activeTab, setActiveTab] = useState<WorkspaceTab>("calendar");
   const [filters, setFilters] = useState<EventFilters>({});
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<PublishingEvent | null>(
@@ -345,17 +355,14 @@ export function AppShell() {
     <div className="noise-bg relative min-h-screen bg-background text-foreground">
       <TopBar
         rangeLabel={range.label}
-        view={view}
-        canEdit={canEdit}
-        onViewChange={setView}
-        onNavigate={(action) =>
-          setDate((current) => navigateDate(current, view, action))
-        }
-        onNewEvent={() => openNewEvent(new Date())}
       />
 
       <main className="relative z-10 mx-auto max-w-[1600px] px-4 py-5 lg:px-6">
-        <Tabs defaultValue="calendar" className="space-y-4">
+        <Tabs
+          value={activeTab}
+          onValueChange={(value) => setActiveTab(value as WorkspaceTab)}
+          className="space-y-4"
+        >
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <TabsList className="grid w-full grid-cols-3 rounded-sm border border-border bg-muted/40 lg:w-[420px]">
               <TabsTrigger
@@ -383,6 +390,87 @@ export function AppShell() {
                 : `${events.length} events / ${drafts.length} drafts`}
             </div>
           </div>
+
+          {activeTab === "calendar" || activeTab === "list" ? (
+            <div className="flex flex-col gap-3 border border-border bg-card/40 p-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="font-mono text-xs uppercase tracking-[0.16em] text-muted-foreground">
+                {view} / {range.label}
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <ToggleGroup
+                  type="single"
+                  value={view}
+                  onValueChange={(value) => {
+                    if (value === "month" || value === "week") {
+                      setView(value);
+                    }
+                  }}
+                  className="rounded-sm border border-border bg-muted/30 p-0.5"
+                >
+                  <ToggleGroupItem
+                    value="month"
+                    aria-label="Show month view"
+                    className="h-8 rounded-sm px-3 font-mono text-xs uppercase tracking-[0.14em] data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
+                  >
+                    Month
+                  </ToggleGroupItem>
+                  <ToggleGroupItem
+                    value="week"
+                    aria-label="Show week view"
+                    className="h-8 rounded-sm px-3 font-mono text-xs uppercase tracking-[0.14em] data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
+                  >
+                    Week
+                  </ToggleGroupItem>
+                </ToggleGroup>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="rounded-sm border-primary/30 font-mono text-xs uppercase tracking-[0.14em] text-primary hover:bg-primary/10"
+                  onClick={() =>
+                    setDate((current) => navigateDate(current, view, "TODAY"))
+                  }
+                >
+                  Today
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-9 w-9 rounded-sm"
+                  onClick={() =>
+                    setDate((current) => navigateDate(current, view, "PREV"))
+                  }
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  <span className="sr-only">Previous</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-9 w-9 rounded-sm"
+                  onClick={() =>
+                    setDate((current) => navigateDate(current, view, "NEXT"))
+                  }
+                >
+                  <ChevronRight className="h-4 w-4" />
+                  <span className="sr-only">Next</span>
+                </Button>
+                {canEdit ? (
+                  <Button
+                    size="sm"
+                    className="rounded-sm font-heading text-xs uppercase tracking-wider"
+                    onClick={() => openNewEvent(new Date())}
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    New event
+                  </Button>
+                ) : (
+                  <div className="border border-border bg-muted/30 px-3 py-2 font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
+                    View only
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : null}
 
           <TabsContent value="calendar" className="m-0 space-y-4">
             <CalendarView
