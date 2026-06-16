@@ -4,24 +4,41 @@ import { useEffect, useMemo, useState } from "react";
 import {
   CalendarCheck,
   CalendarPlus,
+  LayersPlus,
   ExternalLink,
   Eye,
   Plus,
   Save,
   Search,
-  StickyNote,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { ChannelBadge } from "@/components/channel-badge";
 import { StatusBadge } from "@/components/status-badge";
 import { draftStatuses, topicStatuses } from "@/lib/content/constants";
-import type { ContentDraft, ContentTopic, DraftPayload, TopicPayload } from "@/lib/content/types";
+import type {
+  ContentDraft,
+  ContentTopic,
+  DraftPayload,
+  TopicPayload,
+} from "@/lib/content/types";
 import { targetChannels } from "@/lib/events/constants";
 import { formatDateTime, toDatetimeLocalValue } from "@/lib/dates";
 
@@ -30,14 +47,28 @@ type DraftsViewProps = {
   drafts: ContentDraft[];
   canEdit: boolean;
   saving: boolean;
-  onSaveTopic: (topic: ContentTopic | null, payload: TopicPayload) => Promise<void>;
-  onSaveDraft: (draft: ContentDraft | null, payload: DraftPayload) => Promise<void>;
+  onSaveTopic: (
+    topic: ContentTopic | null,
+    payload: TopicPayload,
+  ) => Promise<void>;
+  onSaveDraft: (
+    draft: ContentDraft | null,
+    payload: DraftPayload,
+  ) => Promise<void>;
   onToggleDagger: (draft: ContentDraft) => Promise<void>;
-  onAssignDraft: (draft: ContentDraft, payload: { publish_at: string; status: string; name?: string }) => Promise<void>;
+  onAssignDraft: (
+    draft: ContentDraft,
+    payload: { publish_at: string; status: string; name?: string },
+  ) => Promise<void>;
   onOpenAssignedEvent: (draft: ContentDraft) => Promise<void>;
 };
 
-type DraftSort = "created-asc" | "created-desc" | "title-asc" | "title-desc" | "publish-at";
+type DraftSort =
+  | "created-asc"
+  | "created-desc"
+  | "title-asc"
+  | "title-desc"
+  | "publish-at";
 
 type TopicForm = {
   title: string;
@@ -91,12 +122,20 @@ export function DraftsView({
 }: DraftsViewProps) {
   const [editingTopic, setEditingTopic] = useState<ContentTopic | null>(null);
   const [topicOpen, setTopicOpen] = useState(false);
-  const [topicState, setTopicState] = useState<TopicForm>(() => topicForm(null));
+  const [topicState, setTopicState] = useState<TopicForm>(() =>
+    topicForm(null),
+  );
   const [editingDraft, setEditingDraft] = useState<ContentDraft | null>(null);
   const [draftOpen, setDraftOpen] = useState(false);
-  const [draftState, setDraftState] = useState<DraftForm>(() => draftForm(null, ""));
-  const [assigningDraft, setAssigningDraft] = useState<ContentDraft | null>(null);
-  const [assignAt, setAssignAt] = useState(() => toDatetimeLocalValue(new Date()));
+  const [draftState, setDraftState] = useState<DraftForm>(() =>
+    draftForm(null, ""),
+  );
+  const [assigningDraft, setAssigningDraft] = useState<ContentDraft | null>(
+    null,
+  );
+  const [assignAt, setAssignAt] = useState(() =>
+    toDatetimeLocalValue(new Date()),
+  );
   const [searchQuery, setSearchQuery] = useState("");
   const [sort, setSort] = useState<DraftSort>("created-asc");
 
@@ -112,7 +151,11 @@ export function DraftsView({
         return true;
       }
 
-      return drafts.some((draft) => draft.topic_id === topic.id && draft.title.toLowerCase().includes(query));
+      return drafts.some(
+        (draft) =>
+          draft.topic_id === topic.id &&
+          draft.title.toLowerCase().includes(query),
+      );
     });
   }, [drafts, searchQuery, topics]);
 
@@ -129,38 +172,60 @@ export function DraftsView({
         continue;
       }
 
-      grouped.set(draft.topic_id, [...(grouped.get(draft.topic_id) ?? []), draft]);
+      grouped.set(draft.topic_id, [
+        ...(grouped.get(draft.topic_id) ?? []),
+        draft,
+      ]);
     }
 
     grouped.forEach((topicDrafts, topicId) => {
-      grouped.set(topicId, [...topicDrafts].sort((first, second) => {
-        if (sort === "created-desc") {
-          return new Date(second.created_at).getTime() - new Date(first.created_at).getTime();
-        }
+      grouped.set(
+        topicId,
+        [...topicDrafts].sort((first, second) => {
+          if (sort === "created-desc") {
+            return (
+              new Date(second.created_at).getTime() -
+              new Date(first.created_at).getTime()
+            );
+          }
 
-        if (sort === "title-asc") {
-          return first.title.localeCompare(second.title);
-        }
+          if (sort === "title-asc") {
+            return first.title.localeCompare(second.title);
+          }
 
-        if (sort === "title-desc") {
-          return second.title.localeCompare(first.title);
-        }
+          if (sort === "title-desc") {
+            return second.title.localeCompare(first.title);
+          }
 
-        if (sort === "publish-at") {
-          const firstTime = first.assigned_publish_at ? new Date(first.assigned_publish_at).getTime() : Number.MAX_SAFE_INTEGER;
-          const secondTime = second.assigned_publish_at ? new Date(second.assigned_publish_at).getTime() : Number.MAX_SAFE_INTEGER;
-          return firstTime - secondTime || first.title.localeCompare(second.title);
-        }
+          if (sort === "publish-at") {
+            const firstTime = first.assigned_publish_at
+              ? new Date(first.assigned_publish_at).getTime()
+              : Number.MAX_SAFE_INTEGER;
+            const secondTime = second.assigned_publish_at
+              ? new Date(second.assigned_publish_at).getTime()
+              : Number.MAX_SAFE_INTEGER;
+            return (
+              firstTime - secondTime || first.title.localeCompare(second.title)
+            );
+          }
 
-        return new Date(first.created_at).getTime() - new Date(second.created_at).getTime();
-      }));
+          return (
+            new Date(first.created_at).getTime() -
+            new Date(second.created_at).getTime()
+          );
+        }),
+      );
     });
 
     return grouped;
   }, [drafts, searchQuery, sort, topics]);
 
   const filteredDraftCount = useMemo(
-    () => filteredTopics.reduce((count, topic) => count + (draftsByTopic.get(topic.id)?.length ?? 0), 0),
+    () =>
+      filteredTopics.reduce(
+        (count, topic) => count + (draftsByTopic.get(topic.id)?.length ?? 0),
+        0,
+      ),
     [draftsByTopic, filteredTopics],
   );
 
@@ -177,7 +242,9 @@ export function DraftsView({
       return;
     }
 
-    setDraftState(draftForm(editingDraft, editingDraft?.topic_id ?? topics[0]?.id ?? ""));
+    setDraftState(
+      draftForm(editingDraft, editingDraft?.topic_id ?? topics[0]?.id ?? ""),
+    );
   }, [draftOpen, editingDraft, topics]);
 
   const openNewTopic = () => {
@@ -195,7 +262,9 @@ export function DraftsView({
     event.preventDefault();
     await onSaveTopic(editingTopic, {
       title: topicState.title.trim(),
-      supporting_material_markdown: optional(topicState.supporting_material_markdown),
+      supporting_material_markdown: optional(
+        topicState.supporting_material_markdown,
+      ),
       status: topicState.status,
     });
     setTopicOpen(false);
@@ -255,7 +324,10 @@ export function DraftsView({
             onChange={(event) => setSearchQuery(event.target.value)}
           />
         </div>
-        <Select value={sort} onValueChange={(value) => setSort(value as DraftSort)}>
+        <Select
+          value={sort}
+          onValueChange={(value) => setSort(value as DraftSort)}
+        >
           <SelectTrigger className="rounded-sm sm:w-48">
             <SelectValue />
           </SelectTrigger>
@@ -271,15 +343,22 @@ export function DraftsView({
 
       <div className="overflow-hidden border border-border bg-card/60">
         {topics.length === 0 ? (
-          <div className="flex h-40 items-center justify-center text-sm text-muted-foreground">No topics yet.</div>
+          <div className="flex h-40 items-center justify-center text-sm text-muted-foreground">
+            No topics yet.
+          </div>
         ) : filteredTopics.length === 0 ? (
-          <div className="flex h-40 items-center justify-center text-sm text-muted-foreground">No matching topics or drafts.</div>
+          <div className="flex h-40 items-center justify-center text-sm text-muted-foreground">
+            No matching topics or drafts.
+          </div>
         ) : (
           filteredTopics.map((topic) => {
             const topicDrafts = draftsByTopic.get(topic.id) ?? [];
 
             return (
-              <section key={topic.id} className="border-b border-border last:border-b-0">
+              <section
+                key={topic.id}
+                className="border-b border-border last:border-b-0"
+              >
                 <div className="flex flex-col gap-3 px-4 py-2.5 lg:flex-row lg:items-center lg:justify-between">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
@@ -291,9 +370,13 @@ export function DraftsView({
                   </div>
                   {canEdit ? (
                     <div className="flex shrink-0 gap-2">
-                      <Button variant="outline" size="icon" className="relative h-9 w-9 rounded-sm" onClick={() => openNewDraft(topic.id)}>
-                        <StickyNote className="h-4 w-4" />
-                        <Plus className="absolute right-1 top-1 h-2.5 w-2.5" />
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="relative h-9 w-9 rounded-sm"
+                        onClick={() => openNewDraft(topic.id)}
+                      >
+                        <LayersPlus className="h-4 w-4" />
                         <span className="sr-only">New draft</span>
                       </Button>
                       <Button
@@ -314,14 +397,21 @@ export function DraftsView({
 
                 <div className="border-t border-border px-4 py-3">
                   {topicDrafts.length === 0 ? (
-                    <div className="border-l border-border/80 pl-4 text-sm text-muted-foreground lg:ml-6 lg:pl-5">No drafts for this topic.</div>
+                    <div className="pl-4 text-sm text-muted-foreground lg:ml-6 lg:pl-5">
+                      No drafts for this topic.
+                    </div>
                   ) : (
-                    <div className="divide-y divide-border/70 border-l border-border/80 lg:ml-6">
+                    <div className="divide-y divide-border/70 lg:ml-6">
                       {topicDrafts.map((draft) => (
-                        <div key={draft.id} className="grid gap-3 bg-background/25 px-4 py-2.5 lg:grid-cols-[1fr_auto] lg:items-center lg:pl-5">
+                        <div
+                          key={draft.id}
+                          className="grid gap-3 bg-background/25 px-4 py-2.5 lg:grid-cols-[1fr_auto] lg:items-center lg:pl-5"
+                        >
                           <div className="min-w-0">
                             <div className="flex flex-wrap items-center gap-2">
-                              <span className="text-sm font-medium text-foreground/90">{draft.title}</span>
+                              <span className="text-sm font-medium text-foreground/90">
+                                {draft.title}
+                              </span>
                               <ChannelBadge channel={draft.target_channel} />
                               <StatusBadge status={draft.status as never} />
                               {draft.assigned_publish_at ? (
@@ -333,7 +423,9 @@ export function DraftsView({
                           </div>
                           <div className="flex flex-wrap items-center gap-2 lg:justify-end">
                             <Button
-                              variant={draft.user_has_dagger ? "default" : "outline"}
+                              variant={
+                                draft.user_has_dagger ? "default" : "outline"
+                              }
                               size="sm"
                               className="rounded-sm"
                               disabled={!canEdit}
@@ -343,10 +435,21 @@ export function DraftsView({
                               {draft.dagger_count}
                             </Button>
                             {draft.external_draft_url ? (
-                              <Button variant="ghost" size="icon" className="h-9 w-9 rounded-sm" asChild>
-                                <a href={draft.external_draft_url} target="_blank" rel="noreferrer">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-9 w-9 rounded-sm"
+                                asChild
+                              >
+                                <a
+                                  href={draft.external_draft_url}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                >
                                   <ExternalLink className="h-4 w-4" />
-                                  <span className="sr-only">Open external draft</span>
+                                  <span className="sr-only">
+                                    Open external draft
+                                  </span>
                                 </a>
                               </Button>
                             ) : null}
@@ -363,11 +466,23 @@ export function DraftsView({
                                     }
 
                                     setAssigningDraft(draft);
-                                    setAssignAt(toDatetimeLocalValue(draft.assigned_publish_at ?? new Date()));
+                                    setAssignAt(
+                                      toDatetimeLocalValue(
+                                        draft.assigned_publish_at ?? new Date(),
+                                      ),
+                                    );
                                   }}
                                 >
-                                  {draft.assigned_event_id ? <CalendarCheck className="h-4 w-4" /> : <CalendarPlus className="h-4 w-4" />}
-                                  <span className="sr-only">{draft.assigned_event_id ? "Open linked event" : "Assign to calendar"}</span>
+                                  {draft.assigned_event_id ? (
+                                    <CalendarCheck className="h-4 w-4" />
+                                  ) : (
+                                    <CalendarPlus className="h-4 w-4" />
+                                  )}
+                                  <span className="sr-only">
+                                    {draft.assigned_event_id
+                                      ? "Open linked event"
+                                      : "Assign to calendar"}
+                                  </span>
                                 </Button>
                                 <Button
                                   variant="ghost"
@@ -379,7 +494,9 @@ export function DraftsView({
                                   }}
                                 >
                                   <Eye className="h-4 w-4" />
-                                  <span className="sr-only">View/edit draft</span>
+                                  <span className="sr-only">
+                                    View/edit draft
+                                  </span>
                                 </Button>
                               </>
                             ) : null}
@@ -399,29 +516,65 @@ export function DraftsView({
         <DialogContent className="h-dvh max-h-dvh w-screen max-w-none gap-0 border-border bg-background p-0 sm:rounded-none">
           <form onSubmit={saveTopic} className="flex h-full min-h-0 flex-col">
             <DialogHeader className="border-b border-border px-6 py-5 pr-14">
-              <DialogTitle>{editingTopic ? "Edit topic" : "New topic"}</DialogTitle>
+              <DialogTitle>
+                {editingTopic ? "Edit topic" : "New topic"}
+              </DialogTitle>
             </DialogHeader>
             <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-6 py-5">
               <div className="grid gap-2">
                 <Label htmlFor="topic-title">Title</Label>
-                <Input id="topic-title" value={topicState.title} onChange={(event) => setTopicState((current) => ({ ...current, title: event.target.value }))} required />
+                <Input
+                  id="topic-title"
+                  value={topicState.title}
+                  onChange={(event) =>
+                    setTopicState((current) => ({
+                      ...current,
+                      title: event.target.value,
+                    }))
+                  }
+                  required
+                />
               </div>
               <div className="grid gap-2">
                 <Label>Topic status</Label>
-                <Select value={topicState.status} onValueChange={(status) => setTopicState((current) => ({ ...current, status }))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                <Select
+                  value={topicState.status}
+                  onValueChange={(status) =>
+                    setTopicState((current) => ({ ...current, status }))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
-                    {topicStatuses.map((status) => <SelectItem key={status} value={status}>{status}</SelectItem>)}
+                    {topicStatuses.map((status) => (
+                      <SelectItem key={status} value={status}>
+                        {status}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="topic-material">Supporting material</Label>
-                <Textarea id="topic-material" className="min-h-[55vh] font-mono text-xs" value={topicState.supporting_material_markdown} onChange={(event) => setTopicState((current) => ({ ...current, supporting_material_markdown: event.target.value }))} />
+                <Textarea
+                  id="topic-material"
+                  className="min-h-[55vh] font-mono text-xs"
+                  value={topicState.supporting_material_markdown}
+                  onChange={(event) =>
+                    setTopicState((current) => ({
+                      ...current,
+                      supporting_material_markdown: event.target.value,
+                    }))
+                  }
+                />
               </div>
             </div>
             <DialogFooter className="border-t border-border px-6 py-4">
-              <Button type="submit" className="rounded-sm" disabled={saving}><Save className="h-4 w-4" />Save topic</Button>
+              <Button type="submit" className="rounded-sm" disabled={saving}>
+                <Save className="h-4 w-4" />
+                Save topic
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>
@@ -431,57 +584,141 @@ export function DraftsView({
         <DialogContent className="h-dvh max-h-dvh w-screen max-w-none gap-0 border-border bg-background p-0 sm:rounded-none">
           <form onSubmit={saveDraft} className="flex h-full min-h-0 flex-col">
             <DialogHeader className="border-b border-border px-6 py-5 pr-14">
-              <DialogTitle>{editingDraft ? "Edit draft" : "New draft"}</DialogTitle>
+              <DialogTitle>
+                {editingDraft ? "Edit draft" : "New draft"}
+              </DialogTitle>
             </DialogHeader>
             <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-6 py-5">
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="grid gap-2">
                   <Label>Topic</Label>
-                  <Select value={draftState.topic_id} onValueChange={(topic_id) => setDraftState((current) => ({ ...current, topic_id }))}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>{topics.map((topic) => <SelectItem key={topic.id} value={topic.id}>{topic.title}</SelectItem>)}</SelectContent>
+                  <Select
+                    value={draftState.topic_id}
+                    onValueChange={(topic_id) =>
+                      setDraftState((current) => ({ ...current, topic_id }))
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {topics.map((topic) => (
+                        <SelectItem key={topic.id} value={topic.id}>
+                          {topic.title}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
                   </Select>
                 </div>
                 <div className="grid gap-2">
                   <Label>Channel</Label>
-                  <Select value={draftState.target_channel} onValueChange={(target_channel) => setDraftState((current) => ({ ...current, target_channel }))}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>{targetChannels.map((channel) => <SelectItem key={channel} value={channel}>{channel}</SelectItem>)}</SelectContent>
+                  <Select
+                    value={draftState.target_channel}
+                    onValueChange={(target_channel) =>
+                      setDraftState((current) => ({
+                        ...current,
+                        target_channel,
+                      }))
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {targetChannels.map((channel) => (
+                        <SelectItem key={channel} value={channel}>
+                          {channel}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
                   </Select>
                 </div>
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="draft-title">Title</Label>
-                <Input id="draft-title" value={draftState.title} onChange={(event) => setDraftState((current) => ({ ...current, title: event.target.value }))} required />
+                <Input
+                  id="draft-title"
+                  value={draftState.title}
+                  onChange={(event) =>
+                    setDraftState((current) => ({
+                      ...current,
+                      title: event.target.value,
+                    }))
+                  }
+                  required
+                />
               </div>
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="grid gap-2">
                   <Label>Draft status</Label>
-                  <Select value={draftState.status} onValueChange={(status) => setDraftState((current) => ({ ...current, status }))}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>{draftStatuses.map((status) => <SelectItem key={status} value={status}>{status}</SelectItem>)}</SelectContent>
+                  <Select
+                    value={draftState.status}
+                    onValueChange={(status) =>
+                      setDraftState((current) => ({ ...current, status }))
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {draftStatuses.map((status) => (
+                        <SelectItem key={status} value={status}>
+                          {status}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
                   </Select>
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="external-draft">External draft URL</Label>
-                  <Input id="external-draft" type="url" value={draftState.external_draft_url} onChange={(event) => setDraftState((current) => ({ ...current, external_draft_url: event.target.value }))} />
+                  <Input
+                    id="external-draft"
+                    type="url"
+                    value={draftState.external_draft_url}
+                    onChange={(event) =>
+                      setDraftState((current) => ({
+                        ...current,
+                        external_draft_url: event.target.value,
+                      }))
+                    }
+                  />
                 </div>
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="draft-copy">Markdown content</Label>
                 <ScrollArea className="h-[55vh] min-h-[24rem] rounded-sm border border-input">
-                  <Textarea id="draft-copy" className="min-h-[55vh] resize-none border-0 font-mono text-xs focus-visible:ring-0" value={draftState.markdown_content} onChange={(event) => setDraftState((current) => ({ ...current, markdown_content: event.target.value }))} />
+                  <Textarea
+                    id="draft-copy"
+                    className="min-h-[55vh] resize-none border-0 font-mono text-xs focus-visible:ring-0"
+                    value={draftState.markdown_content}
+                    onChange={(event) =>
+                      setDraftState((current) => ({
+                        ...current,
+                        markdown_content: event.target.value,
+                      }))
+                    }
+                  />
                 </ScrollArea>
               </div>
             </div>
             <DialogFooter className="border-t border-border px-6 py-4">
-              <Button type="submit" className="rounded-sm" disabled={saving || !draftState.topic_id}><Save className="h-4 w-4" />Save draft</Button>
+              <Button
+                type="submit"
+                className="rounded-sm"
+                disabled={saving || !draftState.topic_id}
+              >
+                <Save className="h-4 w-4" />
+                Save draft
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
 
-      <Dialog open={Boolean(assigningDraft)} onOpenChange={(open) => !open && setAssigningDraft(null)}>
+      <Dialog
+        open={Boolean(assigningDraft)}
+        onOpenChange={(open) => !open && setAssigningDraft(null)}
+      >
         <DialogContent className="border-border bg-background sm:max-w-md">
           <form onSubmit={assignDraft} className="space-y-5">
             <DialogHeader>
@@ -489,10 +726,19 @@ export function DraftsView({
             </DialogHeader>
             <div className="grid gap-2">
               <Label htmlFor="assign-at">Publish date/time</Label>
-              <Input id="assign-at" type="datetime-local" value={assignAt} onChange={(event) => setAssignAt(event.target.value)} required />
+              <Input
+                id="assign-at"
+                type="datetime-local"
+                value={assignAt}
+                onChange={(event) => setAssignAt(event.target.value)}
+                required
+              />
             </div>
             <DialogFooter>
-              <Button type="submit" className="rounded-sm" disabled={saving}><CalendarPlus className="h-4 w-4" />Assign</Button>
+              <Button type="submit" className="rounded-sm" disabled={saving}>
+                <CalendarPlus className="h-4 w-4" />
+                Assign
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>
