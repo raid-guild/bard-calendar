@@ -208,7 +208,7 @@ curl -X POST "https://calendar.example.com/api/agent/drafts" \
   -d '{
     "topic_id": "top_...",
     "title": "Onboarding story thread",
-    "target_channel": "x",
+    "target_channel": "x: main account",
     "markdown_content": "Draft copy in markdown.",
     "external_source": "content-agent",
     "external_id": "draft-onboarding-x-thread"
@@ -328,7 +328,7 @@ Supported query filters:
 start           ISO 8601 datetime, inclusive lower bound for publish_at
 end             ISO 8601 datetime, inclusive upper bound for publish_at
 status          idea | planned | drafting | ready | scheduled | published | skipped
-target_channel  discord | x | linkedin | mirror | paragraph | farcaster | newsletter | website | other, or any custom channel string
+target_channel  x: main account | x: raida | linkedin | paragraph | farcaster | newsletter | website: .ia | website: .org | website: raida | discord | other, or any custom channel string
 owner           exact owner match
 name            partial match against event name
 search          partial match against name, notes, or campaign

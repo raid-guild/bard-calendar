@@ -30,9 +30,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { ChannelBadge } from "@/components/channel-badge";
 import { StatusBadge } from "@/components/status-badge";
-import { draftStatuses, topicStatuses } from "@/lib/content/constants";
+import {
+  draftStatuses,
+  topicStatuses,
+  type TopicStatus,
+} from "@/lib/content/constants";
 import type {
   ContentDraft,
   ContentTopic,
@@ -126,6 +131,7 @@ export function DraftsView({
     topicForm(null),
   );
   const [editingDraft, setEditingDraft] = useState<ContentDraft | null>(null);
+  const [newDraftTopicId, setNewDraftTopicId] = useState<string | null>(null);
   const [draftOpen, setDraftOpen] = useState(false);
   const [draftState, setDraftState] = useState<DraftForm>(() =>
     draftForm(null, ""),
@@ -138,11 +144,24 @@ export function DraftsView({
   );
   const [searchQuery, setSearchQuery] = useState("");
   const [sort, setSort] = useState<DraftSort>("created-asc");
+  const [topicStatusView, setTopicStatusView] =
+    useState<TopicStatus>("active");
+
+  const statusTopics = useMemo(
+    () => topics.filter((topic) => topic.status === topicStatusView),
+    [topics, topicStatusView],
+  );
+
+  const statusDraftCount = useMemo(() => {
+    const visibleTopicIds = new Set(statusTopics.map((topic) => topic.id));
+
+    return drafts.filter((draft) => visibleTopicIds.has(draft.topic_id)).length;
+  }, [drafts, statusTopics]);
 
   const filteredTopics = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
 
-    return topics.filter((topic) => {
+    return statusTopics.filter((topic) => {
       if (!query) {
         return true;
       }
@@ -157,7 +176,7 @@ export function DraftsView({
           draft.title.toLowerCase().includes(query),
       );
     });
-  }, [drafts, searchQuery, topics]);
+  }, [drafts, searchQuery, statusTopics]);
 
   const draftsByTopic = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
@@ -243,9 +262,12 @@ export function DraftsView({
     }
 
     setDraftState(
-      draftForm(editingDraft, editingDraft?.topic_id ?? topics[0]?.id ?? ""),
+      draftForm(
+        editingDraft,
+        editingDraft?.topic_id ?? newDraftTopicId ?? topics[0]?.id ?? "",
+      ),
     );
-  }, [draftOpen, editingDraft, topics]);
+  }, [draftOpen, editingDraft, newDraftTopicId, topics]);
 
   const openNewTopic = () => {
     setEditingTopic(null);
@@ -254,6 +276,7 @@ export function DraftsView({
 
   const openNewDraft = (topicId: string) => {
     setEditingDraft(null);
+    setNewDraftTopicId(topicId);
     setDraftState(draftForm(null, topicId));
     setDraftOpen(true);
   };
@@ -303,8 +326,8 @@ export function DraftsView({
       <div className="flex items-center justify-between gap-3">
         <div className="font-mono text-xs uppercase tracking-[0.16em] text-muted-foreground">
           {searchQuery.trim()
-            ? `${filteredTopics.length} of ${topics.length} topics / ${filteredDraftCount} of ${drafts.length} drafts`
-            : `${topics.length} topics / ${drafts.length} drafts`}
+            ? `${filteredTopics.length} of ${statusTopics.length} ${topicStatusView} topics / ${filteredDraftCount} of ${statusDraftCount} drafts`
+            : `${statusTopics.length} ${topicStatusView} topics / ${statusDraftCount} drafts`}
         </div>
         {canEdit ? (
           <Button className="rounded-sm" onClick={openNewTopic}>
@@ -314,7 +337,32 @@ export function DraftsView({
         ) : null}
       </div>
 
-      <div className="flex flex-col gap-2 sm:flex-row">
+      <div className="flex flex-col gap-2 lg:flex-row">
+        <ToggleGroup
+          type="single"
+          value={topicStatusView}
+          onValueChange={(value) => {
+            if (value === "active" || value === "archived") {
+              setTopicStatusView(value);
+            }
+          }}
+          className="justify-start rounded-sm border border-border bg-muted/30 p-0.5"
+        >
+          <ToggleGroupItem
+            value="active"
+            aria-label="Show active topics"
+            className="h-9 rounded-sm px-3 font-mono text-xs uppercase tracking-[0.14em] data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
+          >
+            Active
+          </ToggleGroupItem>
+          <ToggleGroupItem
+            value="archived"
+            aria-label="Show archived topics"
+            className="h-9 rounded-sm px-3 font-mono text-xs uppercase tracking-[0.14em] data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
+          >
+            Archived
+          </ToggleGroupItem>
+        </ToggleGroup>
         <div className="relative flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -328,7 +376,7 @@ export function DraftsView({
           value={sort}
           onValueChange={(value) => setSort(value as DraftSort)}
         >
-          <SelectTrigger className="rounded-sm sm:w-48">
+          <SelectTrigger className="rounded-sm lg:w-48">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -346,9 +394,13 @@ export function DraftsView({
           <div className="flex h-40 items-center justify-center text-sm text-muted-foreground">
             No topics yet.
           </div>
+        ) : statusTopics.length === 0 ? (
+          <div className="flex h-40 items-center justify-center text-sm text-muted-foreground">
+            No {topicStatusView} topics.
+          </div>
         ) : filteredTopics.length === 0 ? (
           <div className="flex h-40 items-center justify-center text-sm text-muted-foreground">
-            No matching topics or drafts.
+            No matching {topicStatusView} topics or drafts.
           </div>
         ) : (
           filteredTopics.map((topic) => {
@@ -370,15 +422,17 @@ export function DraftsView({
                   </div>
                   {canEdit ? (
                     <div className="flex shrink-0 gap-2">
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="relative h-9 w-9 rounded-sm"
-                        onClick={() => openNewDraft(topic.id)}
-                      >
-                        <LayersPlus className="h-4 w-4" />
-                        <span className="sr-only">New draft</span>
-                      </Button>
+                      {topic.status === "active" ? (
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="relative h-9 w-9 rounded-sm"
+                          onClick={() => openNewDraft(topic.id)}
+                        >
+                          <LayersPlus className="h-4 w-4" />
+                          <span className="sr-only">New draft</span>
+                        </Button>
+                      ) : null}
                       <Button
                         variant="ghost"
                         size="icon"
@@ -489,6 +543,7 @@ export function DraftsView({
                                   size="icon"
                                   className="h-9 w-9 rounded-sm"
                                   onClick={() => {
+                                    setNewDraftTopicId(null);
                                     setEditingDraft(draft);
                                     setDraftOpen(true);
                                   }}

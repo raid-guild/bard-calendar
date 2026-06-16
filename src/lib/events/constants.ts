@@ -11,14 +11,16 @@ export const publishingStatuses = [
 export type PublishingStatus = (typeof publishingStatuses)[number];
 
 export const targetChannels = [
-  "discord",
-  "x",
+  "x: main account",
+  "x: raida",
   "linkedin",
-  "mirror",
   "paragraph",
   "farcaster",
   "newsletter",
-  "website",
+  "website: .ia",
+  "website: .org",
+  "website: raida",
+  "discord",
   "other",
 ] as const;
 
