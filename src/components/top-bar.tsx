@@ -1,7 +1,9 @@
 "use client";
 
-import { CalendarDays } from "lucide-react";
+import { BadgeQuestionMark, CalendarDays } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 
 type TopBarProps = {
   rangeLabel: string;
@@ -24,7 +26,17 @@ export function TopBar({ rangeLabel }: TopBarProps) {
             </p>
           </div>
         </div>
-        <div className="flex shrink-0 items-center justify-end">
+        <div className="flex shrink-0 items-center justify-end gap-3">
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-9 w-9 rounded-sm border-primary/30 text-primary hover:bg-primary/10 hover:text-primary"
+            asChild
+          >
+            <Link href="/docs" aria-label="Open docs">
+              <BadgeQuestionMark className="h-4 w-4" />
+            </Link>
+          </Button>
           <Image
             src="/scribe.svg"
             alt="Scribe"
