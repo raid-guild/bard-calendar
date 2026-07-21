@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -43,10 +44,18 @@ import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   createTopicBundleRun,
   fetchTopicBundle,
 } from "@/lib/bundles/client";
-import type { CreateBundleRunPayload } from "@/lib/bundles/types";
+import type {
+  ContentAsset,
+  CreateBundleRunPayload,
+} from "@/lib/bundles/types";
 import {
   bundleAuditChecks,
   bundleSource,
@@ -101,11 +110,13 @@ function DraftCard({
   canEdit,
   currentSourceRevision,
   onToggleDagger,
+  onRegenerate,
 }: {
   draft: ContentDraft;
   canEdit: boolean;
   currentSourceRevision: string | null;
   onToggleDagger: (draft: ContentDraft) => Promise<void>;
+  onRegenerate: (draft: ContentDraft) => void;
 }) {
   const generated = generatedAt(draft);
   const draftRevision = sourceRevision(draft);
@@ -206,16 +217,25 @@ function DraftCard({
               </a>
             </Button>
           ) : null}
-          <Button
-            variant="ghost"
-            size="sm"
-            className="rounded-sm"
-            disabled
-            title="Per-channel regeneration will be connected with the Prism workflow."
-          >
-            <RefreshCw className="h-4 w-4" />
-            Regenerate
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="rounded-sm"
+                disabled={!canEdit}
+                aria-label={`Regenerate only the ${draft.target_channel} Draft`}
+                onClick={() => onRegenerate(draft)}
+              >
+                <RefreshCw className="h-4 w-4" />
+                Regenerate
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent className="max-w-72">
+              Starts a new Prism run for only this channel. Human edits are
+              preserved instead of overwritten.
+            </TooltipContent>
+          </Tooltip>
           {!draft.assigned_event_id ? (
             <Button variant="ghost" size="sm" className="rounded-sm" asChild>
               <Link
@@ -232,12 +252,72 @@ function DraftCard({
   );
 }
 
+function AssetCard({ asset }: { asset: ContentAsset }) {
+  const [previewFailed, setPreviewFailed] = useState(false);
+  const previewUrl = `/api/content-assets/${encodeURIComponent(asset.id)}/content`;
+  const isImage =
+    asset.mime_type?.toLowerCase().startsWith("image/") === true ||
+    asset.kind.toLowerCase().includes("image");
+  const metadataAlt = asset.metadata.alt_text ?? asset.metadata.alt;
+  const alt =
+    typeof metadataAlt === "string" && metadataAlt.trim()
+      ? metadataAlt
+      : `${asset.target_channel ?? "Generated"} ${asset.kind}`;
+
+  return (
+    <article className="border border-border bg-background/35">
+      <div className="relative flex aspect-video items-center justify-center overflow-hidden border-b border-border bg-muted/25">
+        {isImage && !previewFailed ? (
+          <Image
+            src={previewUrl}
+            alt={alt}
+            fill
+            unoptimized
+            sizes="(min-width: 1280px) 25vw, (min-width: 640px) 50vw, 100vw"
+            className="object-cover"
+            onError={() => setPreviewFailed(true)}
+          />
+        ) : (
+          <div className="flex flex-col items-center gap-2 px-4 text-center text-xs text-muted-foreground">
+            <ImageIcon className="h-8 w-8" />
+            {previewFailed ? <span>Preview unavailable</span> : null}
+          </div>
+        )}
+      </div>
+      <div className="space-y-2 p-3">
+        <div className="flex flex-wrap gap-2">
+          <Badge variant="outline" className="rounded-sm text-[10px]">
+            {asset.kind}
+          </Badge>
+          {asset.target_channel ? (
+            <ChannelBadge channel={asset.target_channel} />
+          ) : null}
+        </div>
+        <div className="truncate font-mono text-[10px] text-muted-foreground">
+          {asset.prism_artifact_id}
+        </div>
+        <Button variant="outline" size="sm" className="w-full rounded-sm" asChild>
+          <a
+            href={asset.stable_url ?? previewUrl}
+            target="_blank"
+            rel="noreferrer"
+          >
+            <ExternalLink className="h-4 w-4" />
+            {asset.stable_url ? "Open asset" : "Open full size"}
+          </a>
+        </Button>
+      </div>
+    </article>
+  );
+}
+
 function GenerationDialog({
   open,
   onOpenChange,
   sourceId,
   sourceUrl,
   existingChannels,
+  regenerationChannel,
   pending,
   onStart,
 }: {
@@ -246,6 +326,7 @@ function GenerationDialog({
   sourceId: string | null;
   sourceUrl: string | null;
   existingChannels: string[];
+  regenerationChannel: string | null;
   pending: boolean;
   onStart: (payload: CreateBundleRunPayload) => Promise<void>;
 }) {
@@ -257,6 +338,7 @@ function GenerationDialog({
   const [instructions, setInstructions] = useState("");
   const [runAudit, setRunAudit] = useState(true);
   const [generateImages, setGenerateImages] = useState(true);
+  const existingChannelKey = existingChannels.join("\u0000");
 
   useEffect(() => {
     if (!open) {
@@ -265,11 +347,13 @@ function GenerationDialog({
 
     setPostId(sourceId ?? "");
     setPostUrl(sourceUrl ?? "");
-    setChannels(existingChannels.length ? existingChannels : defaultChannels);
+    setChannels(
+      existingChannelKey ? existingChannelKey.split("\u0000") : defaultChannels,
+    );
     setInstructions("");
     setRunAudit(true);
     setGenerateImages(true);
-  }, [existingChannels, open, sourceId, sourceUrl]);
+  }, [existingChannelKey, open, sourceId, sourceUrl]);
 
   const start = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -292,30 +376,44 @@ function GenerationDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl rounded-sm border-border">
         <DialogHeader>
-          <DialogTitle>Generate distribution bundle</DialogTitle>
+          <DialogTitle>
+            {regenerationChannel
+              ? `Regenerate ${regenerationChannel} Draft`
+              : "Generate distribution bundle"}
+          </DialogTitle>
           <DialogDescription>
-            Bard will create a durable run and dispatch it to the configured
-            Prism content bundle hook.
+            {regenerationChannel
+              ? "This starts a new Prism run for the selected channel. Existing human edits will not be overwritten."
+              : "Bard will ask Prism to audit the Portal post and create Drafts for the selected channels."}
           </DialogDescription>
         </DialogHeader>
         <form className="grid gap-5 py-2" onSubmit={start}>
+          <div className="border border-primary/25 bg-primary/5 px-3 py-2 text-sm leading-6 text-foreground/85">
+            Only the Portal post ID is required. The URL is optional and only
+            adds a convenient source link in Bard.
+          </div>
           <div className="grid gap-2">
-            <Label htmlFor="portal-post-reference">Portal post ID</Label>
+            <Label htmlFor="portal-post-reference">
+              Portal post ID <span className="text-primary">(required)</span>
+            </Label>
             <Input
               id="portal-post-reference"
               value={postId}
               onChange={(event) => setPostId(event.target.value)}
-              placeholder="123"
+              placeholder="e.g. 72"
               required
             />
             <p className="text-xs leading-5 text-muted-foreground">
-              A searchable Portal title selector is planned after the ID-based
-              workflow spike.
+              Find this number in the Portal post record or URL. A searchable
+              title selector is planned.
             </p>
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="portal-post-url">Portal post URL</Label>
+            <Label htmlFor="portal-post-url">
+              Portal post URL{" "}
+              <span className="text-muted-foreground">(optional)</span>
+            </Label>
             <Input
               id="portal-post-url"
               type="url"
@@ -327,14 +425,26 @@ function GenerationDialog({
 
           <fieldset className="grid gap-3">
             <legend className="text-sm font-medium">Target channels</legend>
+            {regenerationChannel ? (
+              <p className="text-xs leading-5 text-muted-foreground">
+                Per-Draft regeneration is limited to {regenerationChannel}. Use
+                Regenerate bundle to run several channels together.
+              </p>
+            ) : null}
             <div className="grid gap-2 sm:grid-cols-2">
               {targetChannels.map((channel) => (
                 <label
                   key={channel}
-                  className="flex items-center gap-3 border border-border bg-card/40 px-3 py-2 text-sm"
+                  className={cn(
+                    "flex items-center gap-3 border border-border bg-card/40 px-3 py-2 text-sm",
+                    regenerationChannel &&
+                      channel !== regenerationChannel &&
+                      "opacity-45",
+                  )}
                 >
                   <Checkbox
                     checked={channels.includes(channel)}
+                    disabled={Boolean(regenerationChannel)}
                     onCheckedChange={(checked) =>
                       setChannels((current) =>
                         checked
@@ -394,7 +504,11 @@ function GenerationDialog({
               ) : (
                 <Sparkles className="h-4 w-4" />
               )}
-              {pending ? "Starting" : "Start generation"}
+              {pending
+                ? "Starting"
+                : regenerationChannel
+                  ? "Start regeneration"
+                  : "Start generation"}
             </Button>
           </DialogFooter>
         </form>
@@ -406,6 +520,9 @@ function GenerationDialog({
 export function TopicBundleWorkspace({ topicId }: { topicId: string }) {
   const queryClient = useQueryClient();
   const [generationOpen, setGenerationOpen] = useState(false);
+  const [generationChannels, setGenerationChannels] = useState<string[] | null>(
+    null,
+  );
 
   const sessionQuery = useQuery({
     queryKey: ["portal-session"],
@@ -445,6 +562,7 @@ export function TopicBundleWorkspace({ topicId }: { topicId: string }) {
       createTopicBundleRun(topicId, payload),
     onSuccess: () => {
       setGenerationOpen(false);
+      setGenerationChannels(null);
       toast.success("Bundle generation queued.");
     },
     onError: (error) => toast.error(error.message),
@@ -583,7 +701,10 @@ export function TopicBundleWorkspace({ topicId }: { topicId: string }) {
               <Button
                 className="rounded-sm"
                 disabled={!canEdit}
-                onClick={() => setGenerationOpen(true)}
+                onClick={() => {
+                  setGenerationChannels(null);
+                  setGenerationOpen(true);
+                }}
               >
                 <Sparkles className="h-4 w-4" />
                 {run ? "Regenerate bundle" : "Generate bundle"}
@@ -763,6 +884,10 @@ export function TopicBundleWorkspace({ topicId }: { topicId: string }) {
                   onToggleDagger={async (value) => {
                     await daggerMutation.mutateAsync(value);
                   }}
+                  onRegenerate={(value) => {
+                    setGenerationChannels([value.target_channel]);
+                    setGenerationOpen(true);
+                  }}
                 />
               ))}
             </div>
@@ -795,38 +920,7 @@ export function TopicBundleWorkspace({ topicId }: { topicId: string }) {
           </div>
           {assets.length ? (
             <div className="grid gap-3 p-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {assets.map((asset) => (
-                <article key={asset.id} className="border border-border bg-background/35">
-                  <div className="flex aspect-video items-center justify-center border-b border-border bg-muted/25">
-                    <ImageIcon className="h-8 w-8 text-muted-foreground" />
-                  </div>
-                  <div className="space-y-2 p-3">
-                    <div className="flex flex-wrap gap-2">
-                      <Badge variant="outline" className="rounded-sm text-[10px]">
-                        {asset.kind}
-                      </Badge>
-                      {asset.target_channel ? (
-                        <ChannelBadge channel={asset.target_channel} />
-                      ) : null}
-                    </div>
-                    <div className="truncate font-mono text-[10px] text-muted-foreground">
-                      {asset.prism_artifact_id}
-                    </div>
-                    {asset.stable_url ? (
-                      <Button variant="outline" size="sm" className="w-full rounded-sm" asChild>
-                        <a href={asset.stable_url} target="_blank" rel="noreferrer">
-                          <ExternalLink className="h-4 w-4" />
-                          Open asset
-                        </a>
-                      </Button>
-                    ) : (
-                      <Button variant="outline" size="sm" className="w-full rounded-sm" disabled>
-                        Artifact proxy required
-                      </Button>
-                    )}
-                  </div>
-                </article>
-              ))}
+              {assets.map((asset) => <AssetCard key={asset.id} asset={asset} />)}
             </div>
           ) : (
             <div className="flex min-h-40 flex-col items-center justify-center px-5 text-center text-sm text-muted-foreground">
@@ -892,10 +986,16 @@ export function TopicBundleWorkspace({ topicId }: { topicId: string }) {
 
       <GenerationDialog
         open={generationOpen}
-        onOpenChange={setGenerationOpen}
+        onOpenChange={(open) => {
+          setGenerationOpen(open);
+          if (!open) setGenerationChannels(null);
+        }}
         sourceId={source.id}
         sourceUrl={source.url}
-        existingChannels={existingChannels}
+        existingChannels={generationChannels ?? existingChannels}
+        regenerationChannel={
+          generationChannels?.length === 1 ? generationChannels[0] : null
+        }
         pending={createRunMutation.isPending}
         onStart={async (payload) => {
           await createRunMutation.mutateAsync(payload);

@@ -14,7 +14,9 @@ Implementation progress:
 
 - Phase 1 Topic bundle workspace implemented.
 - Phase 2 Bard run/asset persistence and API contracts implemented.
-- Prism workflow/hook, Portal post selector, artifact proxy, and distribution remain future work.
+- Phase 3 Prism workflow/hook configured and exercised with a Portal post.
+- Authenticated artifact previews and per-channel regeneration implemented.
+- Portal post selector, image-specific regeneration, and distribution remain future work.
 
 ## Summary
 
