@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { artifactResponseHeaders } from "@/lib/bundles/artifact-response";
 import { fetchPrismArtifactContent, PrismBundleError } from "@/lib/bundles/prism-client";
 import { getContentAsset } from "@/lib/bundles/queries";
 import { requireViewerSession } from "@/lib/portal-auth";
@@ -29,19 +30,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
       asset.prism_request_id,
       asset.prism_artifact_id,
     );
-    const headers = new Headers({
-      "cache-control": "private, max-age=300",
-      "content-disposition": "inline",
-      "content-type":
-        upstream.headers.get("content-type") ??
-        asset.mime_type ??
-        "application/octet-stream",
-    });
-    const contentLength = upstream.headers.get("content-length");
-
-    if (contentLength) {
-      headers.set("content-length", contentLength);
-    }
+    const headers = artifactResponseHeaders(upstream.headers, asset.mime_type);
 
     return new NextResponse(upstream.body, { headers });
   } catch (error) {
