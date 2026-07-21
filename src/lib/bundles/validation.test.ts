@@ -1,10 +1,20 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import {
   createBundleRunSchema,
   updateBundleRunSchema,
   upsertContentAssetSchema,
 } from "@/lib/bundles/validation";
 import { mapUpsertContentAssetInputToUpdateRow } from "@/lib/bundles/mapping";
+
+const originalDurableHosts = process.env.BARD_CONTENT_ASSET_DURABLE_HOSTS;
+
+afterEach(() => {
+  if (originalDurableHosts === undefined) {
+    delete process.env.BARD_CONTENT_ASSET_DURABLE_HOSTS;
+  } else {
+    process.env.BARD_CONTENT_ASSET_DURABLE_HOSTS = originalDurableHosts;
+  }
+});
 
 describe("bundle validation", () => {
   it("normalizes a generation request and removes duplicate channels", () => {
@@ -64,6 +74,23 @@ describe("bundle validation", () => {
     });
   });
 
+  it("adds a server-side finish time to terminal run updates", () => {
+    const before = Date.now();
+    const terminal = updateBundleRunSchema.parse({
+      status: "complete",
+      finished_at: null,
+    });
+
+    expect(terminal.finished_at).toBeTypeOf("string");
+    expect(new Date(terminal.finished_at!).getTime()).toBeGreaterThanOrEqual(before);
+    expect(
+      updateBundleRunSchema.safeParse({ finished_at: null }).success,
+    ).toBe(false);
+    expect(
+      updateBundleRunSchema.parse({ status: "running", finished_at: null }),
+    ).toEqual({ status: "running", finished_at: null });
+  });
+
   it("rejects invalid stable asset URLs", () => {
     expect(
       upsertContentAssetSchema.safeParse({
@@ -72,6 +99,36 @@ describe("bundle validation", () => {
         prism_request_id: "req_1",
         prism_artifact_id: "art_1",
         stable_url: "/internal/artifact",
+      }).success,
+    ).toBe(false);
+  });
+
+  it("accepts only configured durable asset hosts without signed parameters", () => {
+    process.env.BARD_CONTENT_ASSET_DURABLE_HOSTS = "assets.raidguild.org";
+    const input = {
+      topic_id: "top_1",
+      kind: "social-image",
+      prism_request_id: "req_1",
+      prism_artifact_id: "art_1",
+    };
+
+    expect(
+      upsertContentAssetSchema.safeParse({
+        ...input,
+        stable_url: "https://assets.raidguild.org/bundles/art_1.png",
+      }).success,
+    ).toBe(true);
+    expect(
+      upsertContentAssetSchema.safeParse({
+        ...input,
+        stable_url: "https://other.example.com/art_1.png",
+      }).success,
+    ).toBe(false);
+    expect(
+      upsertContentAssetSchema.safeParse({
+        ...input,
+        stable_url:
+          "https://assets.raidguild.org/art_1.png?X-Amz-Signature=temporary",
       }).success,
     ).toBe(false);
   });

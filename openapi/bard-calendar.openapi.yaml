@@ -595,7 +595,10 @@ components:
             $ref: '#/components/schemas/AuditCheck'
         error_message: { type: [string, 'null'] }
         started_at: { type: [string, 'null'], format: date-time }
-        finished_at: { type: [string, 'null'], format: date-time }
+        finished_at:
+          type: [string, 'null']
+          format: date-time
+          description: Bard assigns the current server time for terminal statuses when omitted or null. Clearing requires an explicit non-terminal status.
     BundleRun:
       allOf:
         - $ref: '#/components/schemas/BundleRunUpdate'
@@ -637,7 +640,10 @@ components:
         target_channel: { type: [string, 'null'] }
         prism_request_id: { type: string, minLength: 1 }
         prism_artifact_id: { type: string, minLength: 1 }
-        stable_url: { type: [string, 'null'], format: uri }
+        stable_url:
+          type: [string, 'null']
+          format: uri
+          description: HTTPS URL on a hostname configured in BARD_CONTENT_ASSET_DURABLE_HOSTS, without signed URL parameters.
         mime_type: { type: [string, 'null'] }
         prompt: { type: [string, 'null'] }
         metadata:

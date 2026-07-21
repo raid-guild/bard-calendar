@@ -373,7 +373,7 @@ Audit checks use:
 
 Allowed audit statuses are `pass`, `warning`, `fail`, and `not_checked`.
 
-Update the run as meaningful stages complete. Set `status=running` while work is active. Use `partial` when useful artifacts were produced but one or more requested outputs failed. Terminal runs should set `finished_at`.
+Update the run as meaningful stages complete. Set `status=running` while work is active. Use `partial` when useful artifacts were produced but one or more requested outputs failed. Bard assigns `finished_at` server-side when a terminal status is received and it was omitted or null. Clearing `finished_at` requires an explicit non-terminal status.
 
 ### Upsert Content Asset
 
@@ -404,7 +404,7 @@ metadata
 
 Assets are idempotent by `prism_request_id + prism_artifact_id`. The Prism request must already be attached to a Bard bundle run for the same Topic. When `draft_id` is supplied, that Draft must belong to the Topic.
 
-`stable_url` must be a durable URL safe for Bard to retain. Do not send an internal Railway hostname, a service-authenticated artifact URL, or a short-lived signed URL. Omit it until Bard has an artifact proxy or the approved image has been promoted to durable media storage.
+`stable_url` must be an HTTPS URL on an exact hostname configured in `BARD_CONTENT_ASSET_DURABLE_HOSTS`. Signed URL parameters are rejected. Do not send an internal Railway hostname, a service-authenticated artifact URL, or a short-lived signed URL. Omit it until Bard has an artifact proxy or the approved image has been promoted to configured durable media storage.
 
 ### Generation Reconciliation
 

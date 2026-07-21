@@ -117,7 +117,7 @@ Create a normal Bard Draft with:
 
 ```txt
 target_channel = newsletter
-external_source = portal-newsletter
+external_source = prism-content-bundle
 external_id = portal-post:<post-id>:newsletter
 ```
 
@@ -129,16 +129,25 @@ Suggested newsletter artifact data:
 subject
 preheader
 body_markdown
+portal_post_id
+prism_request_id
 rendered_html_artifact_id
 rendered_text_artifact_id
 template_id
 source_mode             latest_saved_draft | published
 source_revision
 generated_content_hash
+generated_at
 audit_status
 approved_at
 approved_by
 ```
+
+The generated provenance fields `portal_post_id`, `prism_request_id`,
+`source_revision`, `generated_content_hash`, and `generated_at` are required.
+Regeneration must compare the current body with `generated_content_hash`; if a
+human edited the Draft, preserve the edit and save the regenerated proposal as a
+separate Prism artifact instead of overwriting it.
 
 ### Publishing Event
 
@@ -147,6 +156,8 @@ A Newsletter Draft can be attached to one or more Publishing Events. Audience an
 Suggested newsletter delivery data:
 
 ```txt
+topic_id
+draft_id
 list_ids
 audience_label
 estimated_recipient_count
@@ -167,6 +178,12 @@ last_synced_at
 last_error
 ```
 
+Every newsletter Publishing Event or delivery record must retain both
+`topic_id` and `draft_id`. Writes must verify that the Draft belongs to the
+Topic and that the Event points to that same Draft, preserving the explicit
+Topic -> Draft -> Publishing Event ownership chain during sync and
+reconciliation.
+
 The generic Publishing Event status remains the calendar-facing projection:
 
 ```txt
@@ -174,6 +191,18 @@ planned -> drafting -> ready -> scheduled -> published
 ```
 
 Provider-specific state should remain separately visible so Bard does not claim an email was scheduled or sent without listmonk evidence.
+
+The existing calendar projection uses `skipped` for exceptional terminal
+outcomes while retaining the exact provider state and error separately:
+
+| Provider outcome | Bard Event status |
+| --- | --- |
+| sent or already sent | `published` |
+| partial delivery after sending began | `published`, with `provider_status=partial` and the failure detail visible |
+| failed before sending, canceled, or missing/deleted without sent evidence | `skipped` |
+
+Reconciliation must move failed or canceled campaigns out of `scheduled` and
+must never infer `published` without provider evidence that sending began.
 
 ## Primary UX
 
@@ -334,6 +363,23 @@ GET  /api/integrations/bard-calendar/newsletter/campaigns/{id}
 
 These routes should expose newsletter operations, not general Portal or listmonk administration.
 
+Every mutating request must carry an `Idempotency-Key` header. Bard generates
+and persists the key with the local Event operation before calling Portal, then
+reuses that exact key for every retry of the same operation:
+
+```txt
+campaign upsert  newsletter-campaign:<event-id>:<draft-revision>
+test send        newsletter-test:<event-id>:<draft-revision>:<operation-id>
+schedule         newsletter-schedule:<event-id>:<approved-revision>:<requested-send-at>
+cancel           newsletter-cancel:<event-id>:<provider-campaign-id>:<operation-id>
+```
+
+`operation-id` is created once for an intentional test or cancel action, not on
+each network attempt. The Portal adapter persists the key and result against
+the campaign/revision. After an ambiguous timeout, Bard reconciles the campaign
+by external identity and operation key before retrying; it must not issue a new
+key merely because the response was lost.
+
 The adapter must continue to enforce:
 
 - Portal content permissions.
@@ -380,10 +426,11 @@ Recommended schedule flow:
 Reconciliation should handle:
 
 - Schedule changed in listmonk.
-- Campaign canceled in listmonk.
-- Campaign already sent.
-- Partial or failed send.
-- Campaign missing or deleted.
+- Campaign canceled in listmonk: set the Event to `skipped` and retain the provider status.
+- Campaign already sent: set the Event to `published` with provider evidence.
+- Partial send: use `published` only if sending began; retain `provider_status=partial` and the error detail.
+- Failed send before delivery: set the Event to `skipped`.
+- Campaign missing or deleted: set the Event to `skipped` unless previously stored sent evidence proves it was published.
 - Bard retry after a timeout where listmonk may have accepted the operation.
 
 All mutating provider calls need stable idempotency and reconciliation logic. A network timeout must not lead to duplicate campaigns or sends.
@@ -530,7 +577,10 @@ Do not copy subscriber rows into Bard.
 
 ## OpenAPI And Agent Documentation
 
-Document newsletter endpoints in the planned Bard OpenAPI specification.
+Extend `openapi/bard-calendar.openapi.yaml` with every implemented newsletter
+route, request/response schema, status enum, error response, idempotency
+requirement, and authentication requirement. `GET /api/openapi` must expose the
+updated machine-readable contract.
 
 Extend `AGENT.md` with:
 
@@ -561,7 +611,7 @@ Extend `AGENT.md` with:
 
 ## Open Questions
 
-- Should newsletter send approval use a dedicated role, one dagger, multiple daggers, or a named approver?
+- Should newsletter send approval use a dedicated role, one approver, multiple approvers, or a named approver?
 - Is a successful current-revision test send mandatory before scheduling?
 - Should subject/preheader be first-class Bard Draft fields or live in a newsletter artifact record?
 - Can one Newsletter Draft support multiple audience-specific variants, or should each variant be a separate Draft?

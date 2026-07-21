@@ -18,6 +18,7 @@ import {
   requireEditorSession,
   requireViewerSession,
 } from "@/lib/portal-auth";
+import { isUniqueConstraintViolation } from "@/lib/db/errors";
 
 type RouteContext = {
   params: Promise<{ id: string }>;
@@ -86,18 +87,42 @@ export async function POST(request: NextRequest, context: RouteContext) {
     );
   }
 
-  const updatedTopic =
-    (await updateTopic(topic.id, {
-      external_source: parsed.data.source.system,
-      external_id: parsed.data.source.id,
-      metadata: {
-        ...topic.metadata,
-        portal_post_id: parsed.data.source.id,
-        ...(parsed.data.source.url
-          ? { portal_post_url: parsed.data.source.url }
-          : {}),
+  let updatedTopic = topic;
+  try {
+    updatedTopic =
+      (await updateTopic(topic.id, {
+        external_source: parsed.data.source.system,
+        external_id: parsed.data.source.id,
+        metadata: {
+          ...topic.metadata,
+          portal_post_id: parsed.data.source.id,
+          ...(parsed.data.source.url
+            ? { portal_post_url: parsed.data.source.url }
+            : {}),
+        },
+      })) ?? topic;
+  } catch (error) {
+    if (
+      !isUniqueConstraintViolation(
+        error,
+        "content_topics_external_identity_idx",
+      )
+    ) {
+      throw error;
+    }
+
+    const conflict = await getTopicByExternalIdentity(
+      parsed.data.source.system,
+      parsed.data.source.id,
+    );
+    return NextResponse.json(
+      {
+        error: "This Portal post is already linked to another Topic.",
+        topic_id: conflict?.id ?? null,
       },
-    })) ?? topic;
+      { status: 409 },
+    );
+  }
 
   const createdBy =
     authorization.session?.handle ??
