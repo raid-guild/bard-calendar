@@ -4,6 +4,7 @@ import {
   updateBundleRunSchema,
   upsertContentAssetSchema,
 } from "@/lib/bundles/validation";
+import { mapUpsertContentAssetInputToUpdateRow } from "@/lib/bundles/mapping";
 
 describe("bundle validation", () => {
   it("normalizes a generation request and removes duplicate channels", () => {
@@ -46,6 +47,23 @@ describe("bundle validation", () => {
     ).toMatchObject({ status: "running", stage: "auditing" });
   });
 
+  it("preserves omitted run fields and supports explicit clears", () => {
+    expect(updateBundleRunSchema.parse({ status: "running" })).toEqual({
+      status: "running",
+    });
+    expect(
+      updateBundleRunSchema.parse({
+        source_revision: "",
+        prism_request_id: null,
+        error_message: null,
+      }),
+    ).toEqual({
+      source_revision: null,
+      prism_request_id: null,
+      error_message: null,
+    });
+  });
+
   it("rejects invalid stable asset URLs", () => {
     expect(
       upsertContentAssetSchema.safeParse({
@@ -56,5 +74,45 @@ describe("bundle validation", () => {
         stable_url: "/internal/artifact",
       }).success,
     ).toBe(false);
+  });
+
+  it("only updates optional asset fields when they are provided", () => {
+    const parsed = upsertContentAssetSchema.parse({
+      topic_id: "top_1",
+      kind: "social-image",
+      prism_request_id: "req_1",
+      prism_artifact_id: "art_1",
+    });
+    const updatedAt = new Date("2026-07-21T20:00:00.000Z");
+
+    expect(parsed).not.toHaveProperty("stable_url");
+    expect(parsed).not.toHaveProperty("metadata");
+    expect(mapUpsertContentAssetInputToUpdateRow(parsed, updatedAt)).toEqual({
+      topicId: "top_1",
+      kind: "social-image",
+      status: "generated",
+      updatedAt,
+    });
+  });
+
+  it("allows an asset upsert to explicitly clear nullable fields", () => {
+    const parsed = upsertContentAssetSchema.parse({
+      topic_id: "top_1",
+      draft_id: null,
+      kind: "social-image",
+      target_channel: "",
+      prism_request_id: "req_1",
+      prism_artifact_id: "art_1",
+      stable_url: null,
+      metadata: {},
+    });
+    const update = mapUpsertContentAssetInputToUpdateRow(parsed);
+
+    expect(update).toMatchObject({
+      draftId: null,
+      targetChannel: null,
+      stableUrl: null,
+      metadataJson: {},
+    });
   });
 });

@@ -136,3 +136,23 @@ export function mapUpsertContentAssetInputToRow(
     updatedAt: now,
   };
 }
+
+export function mapUpsertContentAssetInputToUpdateRow(
+  input: UpsertContentAssetInput,
+  updatedAt = new Date(),
+) {
+  return {
+    topicId: input.topic_id,
+    kind: input.kind,
+    status: input.status,
+    ...(input.draft_id !== undefined ? { draftId: input.draft_id } : {}),
+    ...(input.target_channel !== undefined
+      ? { targetChannel: input.target_channel }
+      : {}),
+    ...(input.stable_url !== undefined ? { stableUrl: input.stable_url } : {}),
+    ...(input.mime_type !== undefined ? { mimeType: input.mime_type } : {}),
+    ...(input.prompt !== undefined ? { prompt: input.prompt } : {}),
+    ...(input.metadata !== undefined ? { metadataJson: input.metadata } : {}),
+    updatedAt,
+  };
+}

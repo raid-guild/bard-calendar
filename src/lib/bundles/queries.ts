@@ -5,6 +5,7 @@ import {
   mapRowToContentAsset,
   mapUpdateBundleRunInputToRow,
   mapUpsertContentAssetInputToRow,
+  mapUpsertContentAssetInputToUpdateRow,
 } from "@/lib/bundles/mapping";
 import type {
   CreateBundleRunInput,
@@ -86,18 +87,7 @@ export async function upsertContentAsset(input: UpsertContentAssetInput) {
     .values(mapUpsertContentAssetInputToRow(input))
     .onConflictDoUpdate({
       target: [contentAssets.prismRequestId, contentAssets.prismArtifactId],
-      set: {
-        topicId: input.topic_id,
-        draftId: input.draft_id,
-        kind: input.kind,
-        status: input.status,
-        targetChannel: input.target_channel,
-        stableUrl: input.stable_url,
-        mimeType: input.mime_type,
-        prompt: input.prompt,
-        metadataJson: input.metadata,
-        updatedAt: now,
-      },
+      set: mapUpsertContentAssetInputToUpdateRow(input, now),
     })
     .returning();
   return mapRowToContentAsset(row);
