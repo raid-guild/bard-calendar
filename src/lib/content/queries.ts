@@ -48,6 +48,23 @@ export async function getTopic(id: string) {
   return mapRowToTopic(row, Number(draftCount?.value ?? 0));
 }
 
+export async function getTopicByExternalIdentity(
+  externalSource: string,
+  externalId: string,
+) {
+  const db = getDb();
+  const [row] = await db
+    .select()
+    .from(contentTopics)
+    .where(
+      and(
+        eq(contentTopics.externalSource, externalSource),
+        eq(contentTopics.externalId, externalId),
+      ),
+    );
+  return row ? mapRowToTopic(row) : null;
+}
+
 export async function createTopic(input: TopicCreateInput) {
   const db = getDb();
   const [row] = await db.insert(contentTopics).values(mapCreateTopicInputToRow(input)).returning();

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ChevronLeft,
   ChevronRight,
@@ -52,18 +52,7 @@ import type {
   EventPayload,
   PublishingEvent,
 } from "@/lib/events/types";
-
-type PortalSessionResponse = {
-  user?: {
-    name?: string;
-    handle?: string;
-    picture?: string;
-    roles: string[];
-  };
-  canView: boolean;
-  canEdit: boolean;
-  portalModulesUrl: string;
-};
+import { fetchPortalSession } from "@/lib/session/client";
 
 type WorkspaceTab = "calendar" | "list" | "drafts";
 
@@ -99,31 +88,14 @@ function navigateDate(
   return action === "PREV" ? subMonths(date, 1) : addMonths(date, 1);
 }
 
-async function fetchPortalSession(): Promise<PortalSessionResponse> {
-  const response = await fetch("/api/session", { cache: "no-store" });
-  const json = await response.json().catch(() => ({}));
-
-  if (response.status === 401) {
-    return {
-      canView: false,
-      canEdit: false,
-      portalModulesUrl:
-        json.portalModulesUrl ?? "https://portal.raidguild.org/modules",
-    } satisfies PortalSessionResponse;
-  }
-
-  if (!response.ok) {
-    throw new Error(json.error ?? "Unable to load Portal session.");
-  }
-
-  return json as PortalSessionResponse;
-}
-
 export function AppShell() {
   const queryClient = useQueryClient();
   const [date, setDate] = useState(() => new Date());
   const [view, setView] = useState<View>("month");
   const [activeTab, setActiveTab] = useState<WorkspaceTab>("calendar");
+  const [focusedTopicId, setFocusedTopicId] = useState<string | null>(null);
+  const [focusedDraftId, setFocusedDraftId] = useState<string | null>(null);
+  const [assigningDraftId, setAssigningDraftId] = useState<string | null>(null);
   const [filters, setFilters] = useState<EventFilters>({});
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<PublishingEvent | null>(
@@ -132,6 +104,19 @@ export function AppShell() {
   const [initialDate, setInitialDate] = useState<Date | null>(null);
 
   const range = useMemo(() => rangeFor(date, view), [date, view]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get("tab");
+
+    if (tab === "calendar" || tab === "list" || tab === "drafts") {
+      setActiveTab(tab);
+    }
+
+    setFocusedTopicId(params.get("topic"));
+    setFocusedDraftId(params.get("draft"));
+    setAssigningDraftId(params.get("assign"));
+  }, []);
   const queryFilters = useMemo(
     () => ({
       ...filters,
@@ -171,7 +156,7 @@ export function AppShell() {
 
   const draftsQuery = useQuery({
     queryKey: ["drafts"],
-    queryFn: fetchDrafts,
+    queryFn: () => fetchDrafts(),
     enabled: canView,
   });
 
@@ -494,6 +479,9 @@ export function AppShell() {
             <DraftsView
               topics={topics}
               drafts={drafts}
+              focusedTopicId={focusedTopicId}
+              focusedDraftId={focusedDraftId}
+              assigningDraftId={assigningDraftId}
               canEdit={canEdit}
               saving={
                 saveTopicMutation.isPending ||

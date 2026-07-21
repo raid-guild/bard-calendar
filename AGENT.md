@@ -316,6 +316,130 @@ updated_at
 
 When a post goes live, update `live_url` on the publishing event. Keep `topic_id` and `draft_id` attached so performance analysis can roll up from published URLs to drafts and topics.
 
+## Content Distribution Bundles
+
+A distribution bundle begins with one Portal post and maps onto the existing content model:
+
+```txt
+Portal post -> Topic -> channel Drafts -> publishing Events
+```
+
+Use this external identity for the Topic:
+
+```txt
+external_source  portal-post
+external_id      <Portal post id>
+```
+
+Use deterministic Draft external identities so regeneration reconciles rather than duplicates channel copy:
+
+```txt
+external_source  prism-content-bundle
+external_id      portal-post:<post-id>:<target-channel>
+```
+
+Bard creates a bundle run before triggering Prism. The Prism hook payload includes `topic_id` and `bundle_run_id`. Use that exact run ID for progress callbacks.
+
+### Get Or Update Bundle Run
+
+```http
+GET   /api/agent/bundle-runs/{id}
+PATCH /api/agent/bundle-runs/{id}
+```
+
+Optional fields:
+
+```txt
+status           queued | running | partial | complete | failed | canceled
+stage            free-form stable machine stage, such as fetching, auditing, generating_copy, generating_images, or syncing
+source_revision  stable source version or content hash
+prism_request_id Prism request identifier
+audit_checks     structured audit check array
+error_message
+started_at       ISO 8601 datetime or null
+finished_at      ISO 8601 datetime or null
+```
+
+Audit checks use:
+
+```json
+{
+  "key": "cta",
+  "label": "CTA present",
+  "status": "pass",
+  "evidence": "The post ends with a specific signup CTA."
+}
+```
+
+Allowed audit statuses are `pass`, `warning`, `fail`, and `not_checked`.
+
+Update the run as meaningful stages complete. Set `status=running` while work is active. Use `partial` when useful artifacts were produced but one or more requested outputs failed. Terminal runs should set `finished_at`.
+
+### Upsert Content Asset
+
+```http
+PUT /api/agent/content-assets/upsert
+```
+
+Required fields:
+
+```txt
+topic_id
+kind
+prism_request_id
+prism_artifact_id
+```
+
+Optional fields:
+
+```txt
+draft_id
+status           generated | approved | rejected | archived
+target_channel
+stable_url
+mime_type
+prompt
+metadata
+```
+
+Assets are idempotent by `prism_request_id + prism_artifact_id`. The Prism request must already be attached to a Bard bundle run for the same Topic. When `draft_id` is supplied, that Draft must belong to the Topic.
+
+`stable_url` must be a durable URL safe for Bard to retain. Do not send an internal Railway hostname, a service-authenticated artifact URL, or a short-lived signed URL. Omit it until Bard has an artifact proxy or the approved image has been promoted to durable media storage.
+
+### Generation Reconciliation
+
+Every generated Draft should include this metadata:
+
+```json
+{
+  "portal_post_id": "123",
+  "prism_request_id": "...",
+  "source_revision": "sha256:...",
+  "generated_content_hash": "sha256:...",
+  "generated_at": "2026-07-21T18:00:00.000Z"
+}
+```
+
+Before replacing an existing generated Draft, compare its current body with `generated_content_hash`:
+
+- If the body is unchanged, update it idempotently.
+- If a human changed the body, do not overwrite it.
+- Preserve the proposed copy as a Prism artifact and mark the bundle run `partial` with a clear conflict message.
+
+Regenerated images should create new Prism artifacts and content-asset records. Do not destructively replace an approved asset.
+
+Generation does not grant publication authority. Creating publishing Events or posting to external channels must remain a separate explicitly approved action.
+
+## OpenAPI
+
+The machine-readable agent contract is available at:
+
+```http
+GET /api/openapi
+```
+
+The source document is `openapi/bard-calendar.openapi.yaml`.
+
 ## Fetch Events
 
 ```http
@@ -416,6 +540,7 @@ curl -X PATCH "https://calendar.example.com/api/agent/events/evt_..." \
 400  Invalid request body or query
 401  Missing or invalid bearer token
 404  Resource not found
+409  External identity or resource relationship conflict
 ```
 
 ## Timestamp Rules

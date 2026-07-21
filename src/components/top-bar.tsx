@@ -19,7 +19,9 @@ export function TopBar({ rangeLabel }: TopBarProps) {
           </div>
           <div className="min-w-0">
             <h1 className="truncate font-heading text-lg font-semibold tracking-tight text-accent">
-              {process.env.NEXT_PUBLIC_APP_NAME ?? "RaidGuild Content Calendar"}
+              <Link href="/">
+                {process.env.NEXT_PUBLIC_APP_NAME ?? "RaidGuild Content Calendar"}
+              </Link>
             </h1>
             <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
               {rangeLabel}
