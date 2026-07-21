@@ -17,6 +17,14 @@ export async function fetchTopics() {
   return json.topics as ContentTopic[];
 }
 
+export async function fetchTopic(id: string) {
+  const response = await fetch(`/api/topics/${encodeURIComponent(id)}`, {
+    cache: "no-store",
+  });
+  const json = await readJson(response);
+  return json.topic as ContentTopic;
+}
+
 export async function createTopic(payload: TopicPayload) {
   const response = await fetch("/api/topics", {
     method: "POST",
@@ -37,8 +45,15 @@ export async function updateTopic(id: string, payload: Partial<TopicPayload>) {
   return json.topic as ContentTopic;
 }
 
-export async function fetchDrafts() {
-  const response = await fetch("/api/drafts", { cache: "no-store" });
+export async function fetchDrafts(filters: { topic_id?: string } = {}) {
+  const params = new URLSearchParams();
+
+  if (filters.topic_id) {
+    params.set("topic_id", filters.topic_id);
+  }
+
+  const query = params.size ? `?${params.toString()}` : "";
+  const response = await fetch(`/api/drafts${query}`, { cache: "no-store" });
   const json = await readJson(response);
   return json.drafts as ContentDraft[];
 }

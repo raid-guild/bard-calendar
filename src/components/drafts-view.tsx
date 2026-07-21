@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import {
   CalendarCheck,
   CalendarPlus,
@@ -8,6 +9,7 @@ import {
   LayersPlus,
   ExternalLink,
   Eye,
+  PanelTopOpen,
   Plus,
   Save,
   Search,
@@ -56,6 +58,9 @@ import { formatDateTime, toDatetimeLocalValue } from "@/lib/dates";
 type DraftsViewProps = {
   topics: ContentTopic[];
   drafts: ContentDraft[];
+  focusedTopicId?: string | null;
+  focusedDraftId?: string | null;
+  assigningDraftId?: string | null;
   canEdit: boolean;
   saving: boolean;
   onSaveTopic: (
@@ -123,6 +128,9 @@ function draftForm(draft: ContentDraft | null, topicId: string): DraftForm {
 export function DraftsView({
   topics,
   drafts,
+  focusedTopicId,
+  focusedDraftId,
+  assigningDraftId,
   canEdit,
   saving,
   onSaveTopic,
@@ -155,6 +163,8 @@ export function DraftsView({
   const [expandedTopicIds, setExpandedTopicIds] = useState<Set<string>>(
     () => new Set(),
   );
+  const openedFocusedDraftId = useRef<string | null>(null);
+  const openedAssigningDraftId = useRef<string | null>(null);
 
   const statusTopics = useMemo(
     () => topics.filter((topic) => topic.status === topicStatusView),
@@ -256,6 +266,60 @@ export function DraftsView({
       ),
     [draftsByTopic, filteredTopics],
   );
+
+  useEffect(() => {
+    if (!focusedTopicId) {
+      return;
+    }
+
+    setExpandedTopicIds((current) => {
+      if (current.has(focusedTopicId)) {
+        return current;
+      }
+
+      const next = new Set(current);
+      next.add(focusedTopicId);
+      return next;
+    });
+  }, [focusedTopicId]);
+
+  useEffect(() => {
+    if (!focusedDraftId || openedFocusedDraftId.current === focusedDraftId) {
+      return;
+    }
+
+    const draft = drafts.find((candidate) => candidate.id === focusedDraftId);
+
+    if (!draft) {
+      return;
+    }
+
+    openedFocusedDraftId.current = focusedDraftId;
+    setNewDraftTopicId(null);
+    setEditingDraft(draft);
+    setDraftOpen(true);
+  }, [drafts, focusedDraftId]);
+
+  useEffect(() => {
+    if (
+      !assigningDraftId ||
+      openedAssigningDraftId.current === assigningDraftId
+    ) {
+      return;
+    }
+
+    const draft = drafts.find((candidate) => candidate.id === assigningDraftId);
+
+    if (!draft || draft.assigned_event_id) {
+      return;
+    }
+
+    openedAssigningDraftId.current = assigningDraftId;
+    setAssigningDraft(draft);
+    setAssignAt(
+      toDatetimeLocalValue(draft.assigned_publish_at ?? new Date()),
+    );
+  }, [assigningDraftId, drafts]);
 
   useEffect(() => {
     if (!topicOpen) {
@@ -480,6 +544,17 @@ export function DraftsView({
                           </Button>
                         ) : null}
                         <Button
+                          variant="outline"
+                          size="icon"
+                          className="h-9 w-9 rounded-sm"
+                          asChild
+                        >
+                          <Link href={`/topics/${encodeURIComponent(topic.id)}`}>
+                            <PanelTopOpen className="h-4 w-4" />
+                            <span className="sr-only">Open topic workspace</span>
+                          </Link>
+                        </Button>
+                        <Button
                           variant="ghost"
                           size="icon"
                           className="h-9 w-9 rounded-sm"
@@ -492,7 +567,19 @@ export function DraftsView({
                           <span className="sr-only">View/edit topic</span>
                         </Button>
                       </div>
-                    ) : null}
+                    ) : (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-9 w-9 rounded-sm"
+                        asChild
+                      >
+                        <Link href={`/topics/${encodeURIComponent(topic.id)}`}>
+                          <PanelTopOpen className="h-4 w-4" />
+                          <span className="sr-only">Open topic workspace</span>
+                        </Link>
+                      </Button>
+                    )}
                   </div>
 
                   <CollapsibleContent className="border-t border-border px-4 py-3">

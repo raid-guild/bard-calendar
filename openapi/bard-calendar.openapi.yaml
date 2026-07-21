@@ -1,0 +1,650 @@
+openapi: 3.1.0
+info:
+  title: Bard Calendar Agent API
+  version: 0.2.0
+  description: >-
+    Authenticated API for managing content Topics, channel Drafts, publishing
+    Events, Prism bundle runs, and generated asset references.
+servers:
+  - url: /
+    description: Current Bard Calendar origin.
+tags:
+  - name: Topics
+    description: Source ideas and content kernels.
+  - name: Drafts
+    description: Editable channel-specific publishing copy.
+  - name: Events
+    description: Scheduled and published calendar entries.
+  - name: Bundles
+    description: Prism generation runs, audits, and generated asset references.
+security:
+  - bearerAuth: []
+paths:
+  /api/agent/topics:
+    get:
+      operationId: listTopics
+      tags: [Topics]
+      summary: List Topics
+      parameters:
+        - $ref: '#/components/parameters/TopicStatus'
+        - $ref: '#/components/parameters/Search'
+      responses:
+        '200':
+          description: Topic list
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [topics]
+                properties:
+                  topics:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Topic'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      operationId: createTopic
+      tags: [Topics]
+      summary: Create a Topic
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TopicInput'
+      responses:
+        '201':
+          description: Topic created
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/agent/topics/upsert:
+    put:
+      operationId: upsertTopic
+      tags: [Topics]
+      summary: Upsert a Topic by external identity
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/TopicInput'
+                - $ref: '#/components/schemas/ExternalIdentity'
+      responses:
+        '200':
+          description: Topic upserted
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/agent/topics/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      operationId: getTopic
+      tags: [Topics]
+      summary: Get a Topic
+      responses:
+        '200':
+          description: Topic found
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      operationId: updateTopic
+      tags: [Topics]
+      summary: Update a Topic
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TopicPatch'
+      responses:
+        '200':
+          description: Topic updated
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      operationId: deleteTopic
+      tags: [Topics]
+      summary: Delete a Topic and its Drafts
+      responses:
+        '200':
+          description: Topic deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/agent/drafts:
+    get:
+      operationId: listDrafts
+      tags: [Drafts]
+      summary: List Drafts
+      parameters:
+        - name: topic_id
+          in: query
+          schema: { type: string }
+        - name: target_channel
+          in: query
+          schema: { type: string }
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/DraftStatus'
+        - $ref: '#/components/parameters/Search'
+      responses:
+        '200':
+          description: Draft list
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      operationId: createDraft
+      tags: [Drafts]
+      summary: Create a Draft
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DraftInput'
+      responses:
+        '201':
+          description: Draft created
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/agent/drafts/upsert:
+    put:
+      operationId: upsertDraft
+      tags: [Drafts]
+      summary: Upsert a Draft by external identity
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/DraftInput'
+                - $ref: '#/components/schemas/ExternalIdentity'
+      responses:
+        '200':
+          description: Draft upserted
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/agent/drafts/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      operationId: getDraft
+      tags: [Drafts]
+      summary: Get a Draft
+      responses:
+        '200': { description: Draft found }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      operationId: updateDraft
+      tags: [Drafts]
+      summary: Update a Draft
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DraftPatch'
+      responses:
+        '200': { description: Draft updated }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      operationId: deleteDraft
+      tags: [Drafts]
+      summary: Delete a Draft
+      responses:
+        '200': { description: Draft deleted }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/agent/drafts/{id}/assign-event:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      operationId: assignDraftToEvent
+      tags: [Drafts, Events]
+      summary: Create a publishing Event for a Draft
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [publish_at]
+              properties:
+                publish_at: { type: string, format: date-time }
+                name: { type: [string, 'null'] }
+                status:
+                  $ref: '#/components/schemas/EventStatus'
+                content_type: { type: [string, 'null'] }
+                campaign: { type: [string, 'null'] }
+                owner: { type: [string, 'null'] }
+                media_url: { type: [string, 'null'], format: uri }
+                live_url: { type: [string, 'null'], format: uri }
+                notes: { type: [string, 'null'] }
+                metadata: { type: object, additionalProperties: true }
+      responses:
+        '201': { description: Event created and Draft assigned }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/agent/events:
+    get:
+      operationId: listEvents
+      tags: [Events]
+      summary: List publishing Events
+      parameters:
+        - name: start
+          in: query
+          schema: { type: string, format: date-time }
+        - name: end
+          in: query
+          schema: { type: string, format: date-time }
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/EventStatus'
+        - name: target_channel
+          in: query
+          schema: { type: string }
+        - name: owner
+          in: query
+          schema: { type: string }
+        - name: topic_id
+          in: query
+          schema: { type: string }
+        - name: draft_id
+          in: query
+          schema: { type: string }
+        - $ref: '#/components/parameters/Search'
+      responses:
+        '200': { description: Event list }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    post:
+      operationId: createEvent
+      tags: [Events]
+      summary: Create a publishing Event
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EventInput'
+      responses:
+        '201': { description: Event created }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /api/agent/events/upsert:
+    put:
+      operationId: upsertEvent
+      tags: [Events]
+      summary: Upsert an Event by external identity
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/EventInput'
+                - $ref: '#/components/schemas/ExternalIdentity'
+      responses:
+        '200': { description: Event upserted }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /api/agent/events/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    patch:
+      operationId: updateEvent
+      tags: [Events]
+      summary: Update a publishing Event
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EventPatch'
+      responses:
+        '200': { description: Event updated }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/agent/bundle-runs/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      operationId: getBundleRun
+      tags: [Bundles]
+      summary: Get a content bundle run
+      responses:
+        '200':
+          description: Bundle run found
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [run]
+                properties:
+                  run:
+                    $ref: '#/components/schemas/BundleRun'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      operationId: updateBundleRun
+      tags: [Bundles]
+      summary: Update a Prism content bundle run
+      description: >-
+        Prism uses this callback to report source revision, progress, audit
+        results, terminal state, and failures for the run ID in its hook payload.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BundleRunUpdate'
+      responses:
+        '200':
+          description: Bundle run updated
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [run]
+                properties:
+                  run:
+                    $ref: '#/components/schemas/BundleRun'
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/agent/content-assets/upsert:
+    put:
+      operationId: upsertContentAsset
+      tags: [Bundles]
+      summary: Upsert a Prism-generated content asset reference
+      description: Idempotent by prism_request_id and prism_artifact_id.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContentAssetUpsert'
+      responses:
+        '200': { description: Asset reference upserted }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: Prism request, Topic, or Draft relationship conflict
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API token
+  parameters:
+    Id:
+      name: id
+      in: path
+      required: true
+      schema: { type: string }
+    Search:
+      name: search
+      in: query
+      schema: { type: string }
+    TopicStatus:
+      name: status
+      in: query
+      schema:
+        type: string
+        enum: [active, archived]
+  responses:
+    Unauthorized:
+      description: Missing or invalid bearer token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    InvalidRequest:
+      description: Invalid request body or query
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+  schemas:
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error: { type: string }
+        details: { type: object, additionalProperties: true }
+    ExternalIdentity:
+      type: object
+      required: [external_source, external_id]
+      properties:
+        external_source: { type: string, minLength: 1 }
+        external_id: { type: string, minLength: 1 }
+    Metadata:
+      type: object
+      additionalProperties: true
+    TopicStatus:
+      type: string
+      enum: [active, archived]
+    DraftStatus:
+      type: string
+      enum: [draft, ready, assigned, published, archived]
+    EventStatus:
+      type: string
+      enum: [idea, planned, drafting, ready, scheduled, published, skipped]
+    TopicInput:
+      type: object
+      required: [title]
+      properties:
+        title: { type: string, minLength: 1 }
+        supporting_material_markdown: { type: [string, 'null'] }
+        status:
+          $ref: '#/components/schemas/TopicStatus'
+        created_by: { type: [string, 'null'] }
+        metadata:
+          $ref: '#/components/schemas/Metadata'
+        external_source: { type: [string, 'null'] }
+        external_id: { type: [string, 'null'] }
+    TopicPatch:
+      type: object
+      properties:
+        title: { type: string, minLength: 1 }
+        supporting_material_markdown: { type: [string, 'null'] }
+        status:
+          $ref: '#/components/schemas/TopicStatus'
+        created_by: { type: [string, 'null'] }
+        metadata:
+          $ref: '#/components/schemas/Metadata'
+        external_source: { type: [string, 'null'] }
+        external_id: { type: [string, 'null'] }
+    Topic:
+      allOf:
+        - $ref: '#/components/schemas/TopicInput'
+        - type: object
+          required: [id, draft_count, created_at, updated_at]
+          properties:
+            id: { type: string }
+            draft_count: { type: integer }
+            created_at: { type: string, format: date-time }
+            updated_at: { type: string, format: date-time }
+    DraftInput:
+      type: object
+      required: [topic_id, title, target_channel]
+      properties:
+        topic_id: { type: string }
+        title: { type: string, minLength: 1 }
+        target_channel: { type: string, minLength: 1 }
+        markdown_content: { type: string }
+        external_draft_url: { type: [string, 'null'], format: uri }
+        status:
+          $ref: '#/components/schemas/DraftStatus'
+        created_by: { type: [string, 'null'] }
+        metadata:
+          $ref: '#/components/schemas/Metadata'
+        external_source: { type: [string, 'null'] }
+        external_id: { type: [string, 'null'] }
+    DraftPatch:
+      type: object
+      properties:
+        topic_id: { type: string }
+        title: { type: string, minLength: 1 }
+        target_channel: { type: string, minLength: 1 }
+        markdown_content: { type: string }
+        external_draft_url: { type: [string, 'null'], format: uri }
+        status:
+          $ref: '#/components/schemas/DraftStatus'
+        created_by: { type: [string, 'null'] }
+        metadata:
+          $ref: '#/components/schemas/Metadata'
+        external_source: { type: [string, 'null'] }
+        external_id: { type: [string, 'null'] }
+    EventInput:
+      type: object
+      required: [name, publish_at, target_channel]
+      properties:
+        name: { type: string, minLength: 1 }
+        publish_at: { type: string, format: date-time }
+        target_channel: { type: string, minLength: 1 }
+        status:
+          $ref: '#/components/schemas/EventStatus'
+        content_type: { type: [string, 'null'] }
+        campaign: { type: [string, 'null'] }
+        owner: { type: [string, 'null'] }
+        draft_url: { type: [string, 'null'], format: uri }
+        media_url: { type: [string, 'null'], format: uri }
+        live_url: { type: [string, 'null'], format: uri }
+        topic_id: { type: [string, 'null'] }
+        draft_id: { type: [string, 'null'] }
+        notes: { type: [string, 'null'] }
+        metadata:
+          $ref: '#/components/schemas/Metadata'
+        external_source: { type: [string, 'null'] }
+        external_id: { type: [string, 'null'] }
+    EventPatch:
+      type: object
+      properties:
+        name: { type: string, minLength: 1 }
+        publish_at: { type: string, format: date-time }
+        target_channel: { type: string, minLength: 1 }
+        status:
+          $ref: '#/components/schemas/EventStatus'
+        content_type: { type: [string, 'null'] }
+        campaign: { type: [string, 'null'] }
+        owner: { type: [string, 'null'] }
+        draft_url: { type: [string, 'null'], format: uri }
+        media_url: { type: [string, 'null'], format: uri }
+        live_url: { type: [string, 'null'], format: uri }
+        topic_id: { type: [string, 'null'] }
+        draft_id: { type: [string, 'null'] }
+        notes: { type: [string, 'null'] }
+        metadata:
+          $ref: '#/components/schemas/Metadata'
+        external_source: { type: [string, 'null'] }
+        external_id: { type: [string, 'null'] }
+    AuditCheck:
+      type: object
+      required: [key, label, status]
+      properties:
+        key: { type: string }
+        label: { type: string }
+        status:
+          type: string
+          enum: [pass, warning, fail, not_checked]
+        evidence: { type: [string, 'null'] }
+    BundleRunUpdate:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [queued, running, partial, complete, failed, canceled]
+        stage: { type: string, minLength: 1 }
+        source_revision: { type: [string, 'null'] }
+        prism_request_id: { type: [string, 'null'] }
+        audit_checks:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuditCheck'
+        error_message: { type: [string, 'null'] }
+        started_at: { type: [string, 'null'], format: date-time }
+        finished_at:
+          type: [string, 'null']
+          format: date-time
+          description: Bard assigns the current server time for terminal statuses when omitted or null. Clearing requires an explicit non-terminal status.
+    BundleRun:
+      allOf:
+        - $ref: '#/components/schemas/BundleRunUpdate'
+        - type: object
+          required:
+            - id
+            - topic_id
+            - source_system
+            - source_id
+            - requested_channels
+            - options
+            - created_at
+            - updated_at
+          properties:
+            id: { type: string }
+            topic_id: { type: string }
+            source_system: { type: string }
+            source_id: { type: string }
+            source_url: { type: [string, 'null'], format: uri }
+            requested_channels:
+              type: array
+              items: { type: string }
+            options:
+              $ref: '#/components/schemas/Metadata'
+            instructions: { type: [string, 'null'] }
+            created_by: { type: [string, 'null'] }
+            created_at: { type: string, format: date-time }
+            updated_at: { type: string, format: date-time }
+    ContentAssetUpsert:
+      type: object
+      required: [topic_id, kind, prism_request_id, prism_artifact_id]
+      properties:
+        topic_id: { type: string }
+        draft_id: { type: [string, 'null'] }
+        kind: { type: string, minLength: 1 }
+        status:
+          type: string
+          enum: [generated, approved, rejected, archived]
+        target_channel: { type: [string, 'null'] }
+        prism_request_id: { type: string, minLength: 1 }
+        prism_artifact_id: { type: string, minLength: 1 }
+        stable_url:
+          type: [string, 'null']
+          format: uri
+          description: HTTPS URL on a hostname configured in BARD_CONTENT_ASSET_DURABLE_HOSTS, without signed URL parameters.
+        mime_type: { type: [string, 'null'] }
+        prompt: { type: [string, 'null'] }
+        metadata:
+          $ref: '#/components/schemas/Metadata'

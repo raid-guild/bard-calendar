@@ -1,6 +1,6 @@
 # Content Distribution Bundle - Future Feature Spec
 
-Status: proposed future feature
+Status: implementation in progress
 
 Date: July 21, 2026
 
@@ -9,6 +9,12 @@ Primary surface: Bard Calendar Topic detail page
 Workflow engine: Prism
 
 Canonical source: RaidGuild Portal post
+
+Implementation progress:
+
+- Phase 1 Topic bundle workspace implemented.
+- Phase 2 Bard run/asset persistence and API contracts implemented.
+- Prism workflow/hook, Portal post selector, artifact proxy, and distribution remain future work.
 
 ## Summary
 
