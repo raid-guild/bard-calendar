@@ -1,5 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { triggerPrismBundle } from "@/lib/bundles/prism-client";
+import {
+  fetchPrismArtifactContent,
+  triggerPrismBundle,
+} from "@/lib/bundles/prism-client";
 import type { ContentBundleRun } from "@/lib/bundles/types";
 import type { ContentTopic } from "@/lib/content/types";
 
@@ -123,5 +126,35 @@ describe("Prism bundle client", () => {
         instructions: null,
       }),
     ).rejects.toMatchObject({ code: "PRISM_HOOK_FAILED", status: 502 });
+  });
+
+  it("loads artifact bytes through the authenticated Prism API", async () => {
+    vi.stubEnv("PRISM_AGENT_API_BASE_URL", "https://prism.example/");
+    vi.stubEnv("PRISM_AGENT_SERVICE_TOKEN", "secret-token");
+    const upstream = new Response(new Uint8Array([1, 2, 3]), {
+      headers: { "content-type": "image/png" },
+    });
+    const fetchMock = vi.fn().mockResolvedValue(upstream);
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      fetchPrismArtifactContent("request/1", "artifact 2"),
+    ).resolves.toBe(upstream);
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://prism.example/agent/change-board/requests/request%2F1/artifacts/artifact%202/content",
+      expect.objectContaining({
+        headers: { "x-service-token": "secret-token" },
+      }),
+    );
+  });
+
+  it("maps missing Prism artifacts to a 404", async () => {
+    vi.stubEnv("PRISM_AGENT_API_BASE_URL", "https://prism.example");
+    vi.stubEnv("PRISM_AGENT_SERVICE_TOKEN", "secret-token");
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null, { status: 404 })));
+
+    await expect(
+      fetchPrismArtifactContent("request-1", "artifact-2"),
+    ).rejects.toMatchObject({ code: "PRISM_ARTIFACT_FAILED", status: 404 });
   });
 });

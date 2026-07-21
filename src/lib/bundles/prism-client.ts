@@ -100,3 +100,30 @@ export async function triggerPrismBundle(
         : null,
   };
 }
+
+export async function fetchPrismArtifactContent(
+  requestId: string,
+  artifactId: string,
+) {
+  const { baseUrl, serviceToken } = prismConfiguration();
+  const response = await fetch(
+    `${baseUrl}/agent/change-board/requests/${encodeURIComponent(requestId)}/artifacts/${encodeURIComponent(artifactId)}/content`,
+    {
+      cache: "no-store",
+      signal: AbortSignal.timeout(15_000),
+      headers: { "x-service-token": serviceToken },
+    },
+  );
+
+  if (!response.ok || !response.body) {
+    throw new PrismBundleError(
+      response.status === 404
+        ? "Prism artifact not found."
+        : "Could not load the Prism artifact.",
+      "PRISM_ARTIFACT_FAILED",
+      response.status === 404 ? 404 : 502,
+    );
+  }
+
+  return response;
+}

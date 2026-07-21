@@ -39,6 +39,11 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { ChannelBadge } from "@/components/channel-badge";
 import { StatusBadge } from "@/components/status-badge";
 import {
@@ -104,6 +109,21 @@ type DraftForm = {
 function optional(value: string) {
   const trimmed = value.trim();
   return trimmed.length ? trimmed : null;
+}
+
+function ActionTooltip({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{children}</TooltipTrigger>
+      <TooltipContent>{label}</TooltipContent>
+    </Tooltip>
+  );
 }
 
 function topicForm(topic: ContentTopic | null): TopicForm {
@@ -533,52 +553,60 @@ export function DraftsView({
                     {canEdit ? (
                       <div className="flex shrink-0 gap-2">
                         {topic.status === "active" ? (
+                          <ActionTooltip label="Add a Draft to this Topic">
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="relative h-9 w-9 rounded-sm"
+                              aria-label="Add a Draft to this Topic"
+                              onClick={() => openNewDraft(topic.id)}
+                            >
+                              <LayersPlus className="h-4 w-4" />
+                            </Button>
+                          </ActionTooltip>
+                        ) : null}
+                        <ActionTooltip label="Open content bundle workspace">
                           <Button
                             variant="outline"
                             size="icon"
-                            className="relative h-9 w-9 rounded-sm"
-                            onClick={() => openNewDraft(topic.id)}
+                            className="h-9 w-9 rounded-sm"
+                            aria-label="Open content bundle workspace"
+                            asChild
                           >
-                            <LayersPlus className="h-4 w-4" />
-                            <span className="sr-only">New draft</span>
+                            <Link href={`/topics/${encodeURIComponent(topic.id)}`}>
+                              <PanelTopOpen className="h-4 w-4" />
+                            </Link>
                           </Button>
-                        ) : null}
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className="h-9 w-9 rounded-sm"
-                          asChild
-                        >
-                          <Link href={`/topics/${encodeURIComponent(topic.id)}`}>
-                            <PanelTopOpen className="h-4 w-4" />
-                            <span className="sr-only">Open topic workspace</span>
-                          </Link>
-                        </Button>
+                        </ActionTooltip>
+                        <ActionTooltip label="View or edit Topic details">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-9 w-9 rounded-sm"
+                            aria-label="View or edit Topic details"
+                            onClick={() => {
+                              setEditingTopic(topic);
+                              setTopicOpen(true);
+                            }}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </ActionTooltip>
+                      </div>
+                    ) : (
+                      <ActionTooltip label="Open content bundle workspace">
                         <Button
                           variant="ghost"
                           size="icon"
                           className="h-9 w-9 rounded-sm"
-                          onClick={() => {
-                            setEditingTopic(topic);
-                            setTopicOpen(true);
-                          }}
+                          aria-label="Open content bundle workspace"
+                          asChild
                         >
-                          <Eye className="h-4 w-4" />
-                          <span className="sr-only">View/edit topic</span>
+                          <Link href={`/topics/${encodeURIComponent(topic.id)}`}>
+                            <PanelTopOpen className="h-4 w-4" />
+                          </Link>
                         </Button>
-                      </div>
-                    ) : (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-9 w-9 rounded-sm"
-                        asChild
-                      >
-                        <Link href={`/topics/${encodeURIComponent(topic.id)}`}>
-                          <PanelTopOpen className="h-4 w-4" />
-                          <span className="sr-only">Open topic workspace</span>
-                        </Link>
-                      </Button>
+                      </ActionTooltip>
                     )}
                   </div>
 
@@ -622,71 +650,79 @@ export function DraftsView({
                                 {draft.dagger_count}
                               </Button>
                               {draft.external_draft_url ? (
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-9 w-9 rounded-sm"
-                                  asChild
-                                >
-                                  <a
-                                    href={draft.external_draft_url}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                  >
-                                    <ExternalLink className="h-4 w-4" />
-                                    <span className="sr-only">
-                                      Open external draft
-                                    </span>
-                                  </a>
-                                </Button>
-                              ) : null}
-                              {canEdit ? (
-                                <>
-                                  <Button
-                                    variant="outline"
-                                    size="icon"
-                                    className="h-9 w-9 rounded-sm"
-                                    onClick={async () => {
-                                      if (draft.assigned_event_id) {
-                                        await onOpenAssignedEvent(draft);
-                                        return;
-                                      }
-
-                                      setAssigningDraft(draft);
-                                      setAssignAt(
-                                        toDatetimeLocalValue(
-                                          draft.assigned_publish_at ??
-                                            new Date(),
-                                        ),
-                                      );
-                                    }}
-                                  >
-                                    {draft.assigned_event_id ? (
-                                      <CalendarCheck className="h-4 w-4" />
-                                    ) : (
-                                      <CalendarPlus className="h-4 w-4" />
-                                    )}
-                                    <span className="sr-only">
-                                      {draft.assigned_event_id
-                                        ? "Open linked event"
-                                        : "Assign to calendar"}
-                                    </span>
-                                  </Button>
+                                <ActionTooltip label="Open external Draft">
                                   <Button
                                     variant="ghost"
                                     size="icon"
                                     className="h-9 w-9 rounded-sm"
-                                    onClick={() => {
-                                      setNewDraftTopicId(null);
-                                      setEditingDraft(draft);
-                                      setDraftOpen(true);
-                                    }}
+                                    aria-label="Open external Draft"
+                                    asChild
                                   >
-                                    <Eye className="h-4 w-4" />
-                                    <span className="sr-only">
-                                      View/edit draft
-                                    </span>
+                                    <a
+                                      href={draft.external_draft_url}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                    >
+                                      <ExternalLink className="h-4 w-4" />
+                                    </a>
                                   </Button>
+                                </ActionTooltip>
+                              ) : null}
+                              {canEdit ? (
+                                <>
+                                  <ActionTooltip
+                                    label={
+                                      draft.assigned_event_id
+                                        ? "Open linked calendar Event"
+                                        : "Schedule this Draft"
+                                    }
+                                  >
+                                    <Button
+                                      variant="outline"
+                                      size="icon"
+                                      className="h-9 w-9 rounded-sm"
+                                      aria-label={
+                                        draft.assigned_event_id
+                                          ? "Open linked calendar Event"
+                                          : "Schedule this Draft"
+                                      }
+                                      onClick={async () => {
+                                        if (draft.assigned_event_id) {
+                                          await onOpenAssignedEvent(draft);
+                                          return;
+                                        }
+
+                                        setAssigningDraft(draft);
+                                        setAssignAt(
+                                          toDatetimeLocalValue(
+                                            draft.assigned_publish_at ??
+                                              new Date(),
+                                          ),
+                                        );
+                                      }}
+                                    >
+                                      {draft.assigned_event_id ? (
+                                        <CalendarCheck className="h-4 w-4" />
+                                      ) : (
+                                        <CalendarPlus className="h-4 w-4" />
+                                      )}
+                                    </Button>
+                                  </ActionTooltip>
+                                  <ActionTooltip label="View or edit Draft">
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-9 w-9 rounded-sm"
+                                      aria-label="View or edit Draft"
+                                      onClick={() => {
+                                        setNewDraftTopicId(null);
+                                        setEditingDraft(draft);
+                                        setDraftOpen(true);
+                                      }}
+                                    >
+                                      <Eye className="h-4 w-4" />
+                                    </Button>
+                                  </ActionTooltip>
                                 </>
                               ) : null}
                             </div>

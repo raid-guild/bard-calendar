@@ -79,6 +79,15 @@ export async function listContentAssets(topicId: string) {
   return rows.map(mapRowToContentAsset);
 }
 
+export async function getContentAsset(id: string) {
+  const db = getDb();
+  const [row] = await db
+    .select()
+    .from(contentAssets)
+    .where(eq(contentAssets.id, id));
+  return row ? mapRowToContentAsset(row) : null;
+}
+
 export async function upsertContentAsset(input: UpsertContentAssetInput) {
   const db = getDb();
   const now = new Date();
