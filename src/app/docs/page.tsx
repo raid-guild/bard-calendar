@@ -93,6 +93,7 @@ const statuses = [
 const raidaTasks = [
   "Create a topic from a member idea.",
   "Add supporting material, links, and source context.",
+  "Inspect a distribution bundle's warnings, channel drafts, and generated assets.",
   "Generate or revise channel-specific drafts.",
   "Assign drafts to calendar events.",
   "Update events when posts are scheduled or published.",
@@ -101,6 +102,7 @@ const raidaTasks = [
 
 const prompts = [
   "Raida, create a topic for this idea: ...",
+  "Raida, review this content bundle and report any unresolved distribution checks.",
   "Raida, turn this into a Farcaster and X draft.",
   "Raida, schedule this draft for next week.",
   "Raida, add this live URL to the published event.",
@@ -283,7 +285,8 @@ export default function DocsPage() {
             <p className="mt-3 text-sm leading-6 text-muted-foreground">
               Queen Raida has a skill wrapping <code>AGENT.md</code> plus the
               authenticated agent API. She can manage topics, drafts, and
-              publishing events without using the browser UI.
+              publishing events and inspect complete content bundles without
+              using the browser UI.
             </p>
             <ul className="mt-4 grid gap-3 text-sm leading-6 text-muted-foreground">
               {raidaTasks.map((task) => (

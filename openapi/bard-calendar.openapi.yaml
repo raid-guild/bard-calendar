@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Bard Calendar Agent API
-  version: 0.2.0
+  version: 0.3.0
   description: >-
     Authenticated API for managing content Topics, channel Drafts, publishing
     Events, Prism bundle runs, and generated asset references.
@@ -124,6 +124,33 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
+  /api/agent/topics/{id}/bundle:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      operationId: getTopicBundle
+      tags: [Topics, Bundles]
+      summary: Get a Topic's complete content distribution bundle
+      description: >-
+        Returns the Topic, attached channel Drafts, bundle run history and
+        audit checks, generated asset references, and latest run in one
+        response. Inspect audit_checks for warning or fail statuses before
+        recommending publication.
+      responses:
+        '200':
+          description: Composite content distribution bundle
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [bundle]
+                properties:
+                  bundle:
+                    $ref: '#/components/schemas/TopicBundle'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/agent/drafts:
     get:
       operationId: listDrafts
@@ -144,6 +171,16 @@ paths:
       responses:
         '200':
           description: Draft list
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [drafts]
+                properties:
+                  drafts:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Draft'
         '401':
           $ref: '#/components/responses/Unauthorized'
     post:
@@ -191,7 +228,16 @@ paths:
       tags: [Drafts]
       summary: Get a Draft
       responses:
-        '200': { description: Draft found }
+        '200':
+          description: Draft found
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [draft]
+                properties:
+                  draft:
+                    $ref: '#/components/schemas/Draft'
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
     patch:
@@ -527,6 +573,28 @@ components:
           $ref: '#/components/schemas/Metadata'
         external_source: { type: [string, 'null'] }
         external_id: { type: [string, 'null'] }
+    Draft:
+      allOf:
+        - $ref: '#/components/schemas/DraftInput'
+        - type: object
+          required:
+            - id
+            - markdown_content
+            - status
+            - metadata
+            - dagger_count
+            - user_has_dagger
+            - created_at
+            - updated_at
+          properties:
+            id: { type: string }
+            dagger_count: { type: integer, minimum: 0 }
+            user_has_dagger: { type: boolean }
+            assigned_event_id: { type: [string, 'null'] }
+            assigned_publish_at: { type: [string, 'null'], format: date-time }
+            live_url: { type: [string, 'null'], format: uri }
+            created_at: { type: string, format: date-time }
+            updated_at: { type: string, format: date-time }
     EventInput:
       type: object
       required: [name, publish_at, target_channel]
@@ -627,6 +695,40 @@ components:
             created_by: { type: [string, 'null'] }
             created_at: { type: string, format: date-time }
             updated_at: { type: string, format: date-time }
+    ContentAsset:
+      allOf:
+        - $ref: '#/components/schemas/ContentAssetUpsert'
+        - type: object
+          required: [id, status, metadata, created_at, updated_at]
+          properties:
+            id: { type: string }
+            created_at: { type: string, format: date-time }
+            updated_at: { type: string, format: date-time }
+    TopicBundle:
+      type: object
+      required: [topic, drafts, runs, assets, latest_run]
+      properties:
+        topic:
+          $ref: '#/components/schemas/Topic'
+        drafts:
+          type: array
+          description: Channel-specific copy and its generation metadata.
+          items:
+            $ref: '#/components/schemas/Draft'
+        runs:
+          type: array
+          description: Newest-first bundle run history, including audit checks.
+          items:
+            $ref: '#/components/schemas/BundleRun'
+        assets:
+          type: array
+          description: Generated artifact references and metadata.
+          items:
+            $ref: '#/components/schemas/ContentAsset'
+        latest_run:
+          oneOf:
+            - $ref: '#/components/schemas/BundleRun'
+            - type: 'null'
     ContentAssetUpsert:
       type: object
       required: [topic_id, kind, prism_request_id, prism_artifact_id]

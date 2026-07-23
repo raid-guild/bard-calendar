@@ -84,6 +84,7 @@ DELETE /api/events/:id
 Agent endpoints:
 
 ```txt
+GET   /api/agent/topics/:id/bundle
 GET   /api/agent/events
 POST  /api/agent/events
 PATCH /api/agent/events/:id
@@ -96,7 +97,10 @@ Agent endpoints require:
 Authorization: Bearer <BARD_CALENDAR_AGENT_API_TOKEN>
 ```
 
-See `AGENT.md` for supported filters, request examples, and response shape.
+See `AGENT.md` for supported filters, request examples, bundle review
+semantics, and response shapes. The reusable agent skill is in
+`skills/manage-bard-calendar/SKILL.md`, and the machine-readable contract is
+served from `GET /api/openapi`.
 
 Health check:
 
