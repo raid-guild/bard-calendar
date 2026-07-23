@@ -1,0 +1,4 @@
+interface:
+  display_name: "Manage Bard Calendar"
+  short_description: "Inspect and manage Bard content bundles"
+  default_prompt: "Use $manage-bard-calendar to inspect a content bundle, report its audit warnings, and summarize its channel Drafts and generated assets."
