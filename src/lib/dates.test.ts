@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { parseIsoDate, toDatetimeLocalValue, toIsoString } from "@/lib/dates";
+import {
+  parseIsoDate,
+  toDatetimeLocalValue,
+  toIsoString,
+  withLocalDate,
+  withLocalHour,
+} from "@/lib/dates";
 
 describe("date helpers", () => {
   it("parses valid ISO dates and rejects invalid dates", () => {
@@ -16,5 +22,16 @@ describe("date helpers", () => {
     expect(toDatetimeLocalValue(new Date("2026-07-01T16:00:00.000Z"))).toMatch(
       /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/,
     );
+  });
+
+  it("changes the local calendar date and normalizes to a whole hour", () => {
+    expect(withLocalDate("2026-07-30T13:45", new Date(2026, 7, 2))).toBe(
+      "2026-08-02T13:00",
+    );
+  });
+
+  it("uses clamped whole local hours", () => {
+    expect(withLocalHour("2026-07-30T13:45", 24)).toBe("2026-07-30T23:00");
+    expect(withLocalHour("2026-07-30T13:45", -2)).toBe("2026-07-30T00:00");
   });
 });
