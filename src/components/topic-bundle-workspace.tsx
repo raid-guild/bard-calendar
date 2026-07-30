@@ -67,6 +67,7 @@ import { formatDateTime, parseIsoDate } from "@/lib/dates";
 import { targetChannels } from "@/lib/events/constants";
 import { fetchPortalSession } from "@/lib/session/client";
 import { cn } from "@/lib/utils";
+import { normalizeProgress } from "@/lib/progress";
 
 const defaultChannels = ["x: main account", "linkedin", "discord"];
 
@@ -236,16 +237,14 @@ function DraftCard({
               preserved instead of overwritten.
             </TooltipContent>
           </Tooltip>
-          {!draft.assigned_event_id ? (
-            <Button variant="ghost" size="sm" className="rounded-sm" asChild>
-              <Link
-                href={`/?tab=drafts&topic=${encodeURIComponent(draft.topic_id)}&assign=${encodeURIComponent(draft.id)}`}
-              >
-                <CalendarPlus className="h-4 w-4" />
-                Schedule
-              </Link>
-            </Button>
-          ) : null}
+          <Button variant="ghost" size="sm" className="rounded-sm" asChild>
+            <Link
+              href={`/?tab=drafts&topic=${encodeURIComponent(draft.topic_id)}&assign=${encodeURIComponent(draft.id)}`}
+            >
+              <CalendarPlus className="h-4 w-4" />
+              {draft.assigned_event_id ? "Reschedule" : "Schedule"}
+            </Link>
+          </Button>
         </div>
       </div>
     </article>
@@ -628,7 +627,7 @@ export function TopicBundleWorkspace({ topicId }: { topicId: string }) {
 
   const bundle = bundleQuery.data;
   const topic = bundle.topic;
-  const drafts = bundle.drafts;
+  const drafts = bundle.drafts.filter((draft) => draft.status !== "archived");
   const source = bundleSource(topic);
   const run = bundle.latest_run;
   const currentSourceRevision = source.revision ?? run?.source_revision ?? null;
@@ -741,11 +740,19 @@ export function TopicBundleWorkspace({ topicId }: { topicId: string }) {
                     </div>
                   </div>
                 </div>
-                <div className="w-full lg:max-w-sm">
+                <div className="flex w-full items-center gap-3 lg:max-w-sm">
                   <Progress
-                    value={runProgress[run.stage ?? run.status] ?? 12}
-                    className="h-1.5 rounded-none bg-muted"
+                    value={normalizeProgress(
+                      runProgress[run.stage ?? run.status] ?? 12,
+                    )}
+                    className="h-1.5 flex-1 rounded-none bg-muted"
                   />
+                  <span className="w-10 text-right font-mono text-xs text-muted-foreground">
+                    {normalizeProgress(
+                      runProgress[run.stage ?? run.status] ?? 12,
+                    )}
+                    %
+                  </span>
                 </div>
               </div>
             </div>

@@ -211,6 +211,16 @@ export function AppShell() {
     onError: (error) => toast.error(error.message),
   });
 
+  const archiveDraftMutation = useMutation({
+    mutationFn: (draft: ContentDraft) =>
+      updateDraft(draft.id, { status: "archived" }),
+    onSuccess: async () => {
+      await Promise.all([invalidateDrafts(), invalidateTopics()]);
+      toast.success("Draft archived.");
+    },
+    onError: (error) => toast.error(error.message),
+  });
+
   const daggerMutation = useMutation({
     mutationFn: toggleDraftDagger,
     onSuccess: async () => {
@@ -231,7 +241,9 @@ export function AppShell() {
 
   const events = eventsQuery.data ?? [];
   const topics = topicsQuery.data ?? [];
-  const drafts = draftsQuery.data ?? [];
+  const drafts = (draftsQuery.data ?? []).filter(
+    (draft) => draft.status !== "archived",
+  );
 
   const openNewEvent = (prefilledDate = new Date()) => {
     if (!canEdit) {
@@ -496,6 +508,9 @@ export function AppShell() {
               }}
               onToggleDagger={async (draft) => {
                 await daggerMutation.mutateAsync(draft);
+              }}
+              onArchiveDraft={async (draft) => {
+                await archiveDraftMutation.mutateAsync(draft);
               }}
               onAssignDraft={async (draft, payload) => {
                 await assignDraftMutation.mutateAsync({ draft, payload });

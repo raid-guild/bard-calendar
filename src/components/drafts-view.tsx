@@ -13,7 +13,20 @@ import {
   Plus,
   Save,
   Search,
+  Trash2,
 } from "lucide-react";
+import { DateHourPicker } from "@/components/date-hour-picker";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import {
   Collapsible,
@@ -77,6 +90,7 @@ type DraftsViewProps = {
     payload: DraftPayload,
   ) => Promise<void>;
   onToggleDagger: (draft: ContentDraft) => Promise<void>;
+  onArchiveDraft: (draft: ContentDraft) => Promise<void>;
   onAssignDraft: (
     draft: ContentDraft,
     payload: { publish_at: string; status: string; name?: string },
@@ -156,6 +170,7 @@ export function DraftsView({
   onSaveTopic,
   onSaveDraft,
   onToggleDagger,
+  onArchiveDraft,
   onAssignDraft,
   onOpenAssignedEvent,
 }: DraftsViewProps) {
@@ -330,16 +345,20 @@ export function DraftsView({
 
     const draft = drafts.find((candidate) => candidate.id === assigningDraftId);
 
-    if (!draft || draft.assigned_event_id) {
+    if (!draft) {
       return;
     }
 
     openedAssigningDraftId.current = assigningDraftId;
+    if (draft.assigned_event_id) {
+      void onOpenAssignedEvent(draft);
+      return;
+    }
     setAssigningDraft(draft);
     setAssignAt(
       toDatetimeLocalValue(draft.assigned_publish_at ?? new Date()),
     );
-  }, [assigningDraftId, drafts]);
+  }, [assigningDraftId, drafts, onOpenAssignedEvent]);
 
   useEffect(() => {
     if (!topicOpen) {
@@ -723,6 +742,42 @@ export function DraftsView({
                                       <Eye className="h-4 w-4" />
                                     </Button>
                                   </ActionTooltip>
+                                  <AlertDialog>
+                                    <ActionTooltip label="Archive Draft">
+                                      <AlertDialogTrigger asChild>
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          className="h-9 w-9 rounded-sm text-destructive"
+                                          aria-label={`Archive ${draft.title}`}
+                                        >
+                                          <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                      </AlertDialogTrigger>
+                                    </ActionTooltip>
+                                    <AlertDialogContent>
+                                      <AlertDialogHeader>
+                                        <AlertDialogTitle>
+                                          Archive this draft?
+                                        </AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                          It will leave active views, but its
+                                          content, links, daggers, and calendar
+                                          relationship are retained.
+                                        </AlertDialogDescription>
+                                      </AlertDialogHeader>
+                                      <AlertDialogFooter>
+                                        <AlertDialogCancel>
+                                          Cancel
+                                        </AlertDialogCancel>
+                                        <AlertDialogAction
+                                          onClick={() => onArchiveDraft(draft)}
+                                        >
+                                          Archive draft
+                                        </AlertDialogAction>
+                                      </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                  </AlertDialog>
                                 </>
                               ) : null}
                             </div>
@@ -952,12 +1007,10 @@ export function DraftsView({
             </DialogHeader>
             <div className="grid gap-2">
               <Label htmlFor="assign-at">Publish date/time</Label>
-              <Input
+              <DateHourPicker
                 id="assign-at"
-                type="datetime-local"
                 value={assignAt}
-                onChange={(event) => setAssignAt(event.target.value)}
-                required
+                onChange={setAssignAt}
               />
             </div>
             <DialogFooter>

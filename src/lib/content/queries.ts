@@ -3,7 +3,7 @@ import { mapCreateDraftInputToRow, mapCreateTopicInputToRow, mapRowToDraft, mapR
 import type { DraftAssignEventInput, DraftCreateInput, DraftListQuery, DraftUpdateInput, TopicCreateInput, TopicListQuery, TopicUpdateInput } from "@/lib/content/validation";
 import { getDb } from "@/lib/db/client";
 import { contentDrafts, contentTopics, draftDaggers, publishingEvents } from "@/lib/db/schema";
-import { createEvent } from "@/lib/events/queries";
+import { createEvent, updateEvent } from "@/lib/events/queries";
 
 export async function listTopics(filters: TopicListQuery = {}) {
   const db = getDb();
@@ -251,7 +251,7 @@ export async function assignDraftToEvent(draftId: string, input: DraftAssignEven
     return null;
   }
 
-  const event = await createEvent({
+  const eventInput = {
     name: input.name ?? draft.title,
     publish_at: input.publish_at,
     target_channel: draft.target_channel,
@@ -266,7 +266,14 @@ export async function assignDraftToEvent(draftId: string, input: DraftAssignEven
     draft_id: draft.id,
     notes: input.notes,
     metadata: input.metadata,
-  });
+  };
+  const event = draft.assigned_event_id
+    ? await updateEvent(draft.assigned_event_id, eventInput)
+    : await createEvent(eventInput);
+
+  if (!event) {
+    return null;
+  }
 
   await updateDraft(draft.id, { status: "assigned" });
 

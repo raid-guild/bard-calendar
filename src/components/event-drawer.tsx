@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Save, Trash2 } from "lucide-react";
+import { DateHourPicker } from "@/components/date-hour-picker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -203,14 +204,11 @@ export function EventDrawer({
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="grid gap-2">
                   <Label htmlFor="publish_at">Publish date/time</Label>
-                  <Input
+                  <DateHourPicker
                     id="publish_at"
-                    type="datetime-local"
                     value={form.publish_at}
-                    onChange={(inputEvent) => setField("publish_at", inputEvent.target.value)}
-                    required
+                    onChange={(value) => setField("publish_at", value)}
                     disabled={readOnly}
-                    className="rounded-sm"
                   />
                 </div>
                 <div className="grid gap-2">
