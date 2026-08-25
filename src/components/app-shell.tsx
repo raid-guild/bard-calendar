@@ -55,6 +55,7 @@ import type {
   EventPayload,
   PublishingEvent,
 } from "@/lib/events/types";
+import { buildWorkspaceEventFilters } from "@/lib/events/workspace-filters";
 import { fetchPortalSession } from "@/lib/session/client";
 
 type WorkspaceTab = "calendar" | "list" | "published" | "drafts";
@@ -120,10 +121,8 @@ export function AppShell() {
     setFocusedDraftId(params.get("draft"));
     setAssigningDraftId(params.get("assign"));
   }, []);
-  const queryFilters = useMemo(() => activeTab === "published"
-    ? { ...filters, status: "published" as const, order: "desc" as const }
-    : { ...filters, start: filters.start ?? range.start, end: filters.end ?? range.end },
-    [activeTab, filters, range.end, range.start]);
+  const queryFilters = useMemo(() => buildWorkspaceEventFilters(activeTab, filters, range),
+    [activeTab, filters, range]);
 
   const sessionQuery = useQuery({
     queryKey: ["portal-session"],

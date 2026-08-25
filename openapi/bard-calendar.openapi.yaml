@@ -774,6 +774,15 @@ components:
           $ref: '#/components/schemas/Metadata'
         external_source: { type: [string, 'null'] }
         external_id: { type: [string, 'null'] }
+    Event:
+      allOf:
+        - $ref: '#/components/schemas/EventInput'
+        - type: object
+          required: [id, status, metadata, created_at, updated_at]
+          properties:
+            id: { type: string }
+            created_at: { type: string, format: date-time }
+            updated_at: { type: string, format: date-time }
     AuditCheck:
       type: object
       required: [key, label, status]
@@ -863,9 +872,9 @@ components:
             $ref: '#/components/schemas/ContentAsset'
         publishing_events:
           type: array
-          description: Newest-first published outputs linked to this Topic.
+          description: Newest-first published outputs linked to this Topic, including server-generated identifiers and timestamps.
           items:
-            $ref: '#/components/schemas/EventInput'
+            $ref: '#/components/schemas/Event'
         latest_run:
           oneOf:
             - $ref: '#/components/schemas/BundleRun'

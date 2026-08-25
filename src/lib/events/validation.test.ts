@@ -4,6 +4,7 @@ import {
   eventCreateSchema,
   eventUpdateSchema,
 } from "@/lib/events/validation";
+import { draftMarkPublishedSchema } from "@/lib/content/validation";
 
 const validEvent = {
   name: "Share weekly raid opportunities thread",
@@ -17,6 +18,15 @@ const validEvent = {
 };
 
 describe("event validation", () => {
+  it("preserves omitted mark-published metadata while allowing explicit clears", () => {
+    const base = {
+      live_url: "https://example.com/post",
+      published_at: "2026-08-18T23:10:38Z",
+    };
+
+    expect(draftMarkPublishedSchema.parse(base)).toEqual(base);
+    expect(draftMarkPublishedSchema.parse({ ...base, campaign: "" }).campaign).toBeNull();
+  });
   it("accepts a valid event payload", () => {
     const parsed = eventCreateSchema.safeParse(validEvent);
 

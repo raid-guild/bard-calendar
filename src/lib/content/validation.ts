@@ -138,12 +138,15 @@ export const draftAssignEventSchema = z.object({
 export const draftMarkPublishedSchema = z.object({
   live_url: z.string().trim().url("A valid live URL is required."),
   published_at: z.string().datetime({ offset: true }),
-  attribution: optionalText,
-  publisher_account: optionalText,
-  campaign: optionalText,
-  owner: optionalText,
-  name: optionalText,
-  notes: optionalText,
+  // Unlike create/update payloads, omitted publication metadata means "keep the
+  // linked event's value". Preserve undefined so the service can distinguish
+  // omission from an explicit null/empty-string clear.
+  attribution: optionalText.optional().transform((value) => value === undefined ? undefined : value),
+  publisher_account: optionalText.optional().transform((value) => value === undefined ? undefined : value),
+  campaign: optionalText.optional().transform((value) => value === undefined ? undefined : value),
+  owner: optionalText.optional().transform((value) => value === undefined ? undefined : value),
+  name: optionalText.optional().transform((value) => value === undefined ? undefined : value),
+  notes: optionalText.optional().transform((value) => value === undefined ? undefined : value),
 });
 
 export type TopicCreateInput = z.infer<typeof topicCreateSchema>;

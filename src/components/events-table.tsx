@@ -59,7 +59,7 @@ export function EventsTable({ events, onSelectEvent }: EventsTableProps) {
         <TableBody>
           {events.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={12} className="h-28 text-center text-muted-foreground">
+              <TableCell colSpan={13} className="h-28 text-center text-muted-foreground">
                 No events found.
               </TableCell>
             </TableRow>

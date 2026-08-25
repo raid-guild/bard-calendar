@@ -396,19 +396,19 @@ export async function markDraftPublished(draftId: string, input: DraftMarkPublis
       : linked[0];
     const now = new Date();
     const values = {
-      name: input.name ?? draft.title,
+      name: input.name !== undefined ? input.name ?? draft.title : existing?.name ?? draft.title,
       publishAt: new Date(input.published_at),
       targetChannel: draft.targetChannel,
       status: "published",
-      campaign: input.campaign,
-      owner: input.owner,
-      attribution: input.attribution,
-      publisherAccount: input.publisher_account,
-      draftUrl: draft.externalDraftUrl,
+      campaign: input.campaign !== undefined ? input.campaign : existing?.campaign,
+      owner: input.owner !== undefined ? input.owner : existing?.owner,
+      attribution: input.attribution !== undefined ? input.attribution : existing?.attribution,
+      publisherAccount: input.publisher_account !== undefined ? input.publisher_account : existing?.publisherAccount,
+      draftUrl: draft.externalDraftUrl ?? existing?.draftUrl,
       liveUrl,
       topicId: draft.topicId,
       draftId: draft.id,
-      notes: input.notes,
+      notes: input.notes !== undefined ? input.notes : existing?.notes,
       updatedAt: now,
     };
     const [event] = existing
