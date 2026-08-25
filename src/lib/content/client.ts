@@ -1,4 +1,4 @@
-import type { ContentDraft, ContentTopic, DraftPayload, TopicPayload } from "@/lib/content/types";
+import type { ContentCategory, ContentDraft, ContentTopic, DraftPayload, TopicPayload } from "@/lib/content/types";
 import type { EventPayload, PublishingEvent } from "@/lib/events/types";
 
 async function readJson(response: Response) {
@@ -42,6 +42,21 @@ export async function updateTopic(id: string, payload: Partial<TopicPayload>) {
     body: JSON.stringify(payload),
   });
   const json = await readJson(response);
+  return json.topic as ContentTopic;
+}
+
+export async function fetchCategories() {
+  const json = await readJson(await fetch("/api/categories", { cache: "no-store" }));
+  return json.categories as ContentCategory[];
+}
+
+export async function publishTopic(id: string, payload: { publication_at: string; evidence_type: "live_url" | "external_post_id" | "manual_confirmation"; evidence_value?: string | null; manual_confirmation: boolean }) {
+  const json = await readJson(await fetch(`/api/topics/${id}/publish`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) }));
+  return json.topic as ContentTopic;
+}
+
+export async function reopenTopic(id: string, reason: string) {
+  const json = await readJson(await fetch(`/api/topics/${id}/reopen`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ reason }) }));
   return json.topic as ContentTopic;
 }
 

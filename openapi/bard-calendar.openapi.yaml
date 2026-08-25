@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Bard Calendar Agent API
-  version: 0.3.0
+  version: 0.4.0
   description: >-
     Authenticated API for managing content Topics, channel Drafts, publishing
     Events, Prism bundle runs, and generated asset references.
@@ -124,6 +124,72 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
+  /api/agent/topics/{id}/publish:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      operationId: publishTopic
+      tags: [Topics]
+      summary: Mark a Topic published with dated evidence
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TopicPublishInput'
+      responses:
+        '200': { description: Topic published and audit event recorded }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/agent/topics/{id}/reopen:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      operationId: reopenTopic
+      tags: [Topics]
+      summary: Reopen a published Topic without changing child outputs
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason, actor]
+              properties:
+                reason: { type: string, minLength: 1 }
+                actor: { type: string, minLength: 1 }
+      responses:
+        '200': { description: Topic reopened and audit event recorded }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/agent/topics/{id}/audit:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      operationId: listTopicAuditEvents
+      tags: [Topics]
+      summary: List append-only Topic audit history
+      responses:
+        '200': { description: Topic audit events }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /api/agent/categories:
+    get:
+      operationId: listCategories
+      tags: [Topics]
+      summary: List configurable Topic categories
+      responses:
+        '200': { description: Category list }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    post:
+      operationId: createCategory
+      tags: [Topics]
+      summary: Create a Topic category
+      responses:
+        '201': { description: Category created }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
   /api/agent/topics/{id}/bundle:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -520,6 +586,13 @@ components:
           $ref: '#/components/schemas/Metadata'
         external_source: { type: [string, 'null'] }
         external_id: { type: [string, 'null'] }
+        category_id: { type: [string, 'null'] }
+        tags:
+          type: array
+          maxItems: 20
+          items: { type: string, maxLength: 40 }
+        editorial_interest_score: { type: [integer, 'null'], minimum: 0, maximum: 100 }
+        engagement_interest_count: { type: integer, minimum: 0 }
     TopicPatch:
       type: object
       properties:
@@ -542,6 +615,22 @@ components:
             draft_count: { type: integer }
             created_at: { type: string, format: date-time }
             updated_at: { type: string, format: date-time }
+            publication_status: { type: string, enum: [unpublished, published] }
+            publication_at: { type: [string, 'null'], format: date-time }
+            publication_evidence_type: { type: [string, 'null'] }
+            publication_evidence_value: { type: [string, 'null'] }
+            publication_manual_confirmation: { type: boolean }
+            published_by: { type: [string, 'null'] }
+            publication_recorded_at: { type: [string, 'null'], format: date-time }
+    TopicPublishInput:
+      type: object
+      required: [publication_at, evidence_type, manual_confirmation, actor]
+      properties:
+        publication_at: { type: string, format: date-time }
+        evidence_type: { type: string, enum: [live_url, external_post_id, manual_confirmation] }
+        evidence_value: { type: [string, 'null'] }
+        manual_confirmation: { type: boolean }
+        actor: { type: string, minLength: 1 }
     DraftInput:
       type: object
       required: [topic_id, title, target_channel]

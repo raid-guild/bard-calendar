@@ -1,4 +1,19 @@
-import { index, jsonb, pgTable, primaryKey, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { boolean, index, integer, jsonb, pgTable, primaryKey, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+
+export const contentCategories = pgTable(
+  "content_categories",
+  {
+    id: text("id").primaryKey(),
+    key: text("key").notNull(),
+    name: text("name").notNull(),
+    active: boolean("active").notNull().default(true),
+    sortOrder: integer("sort_order").notNull().default(0),
+    metadataJson: jsonb("metadata_json").notNull().default({}),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({ keyIdx: uniqueIndex("content_categories_key_idx").on(table.key) }),
+);
 
 export const contentTopics = pgTable(
   "content_topics",
@@ -7,6 +22,17 @@ export const contentTopics = pgTable(
     title: text("title").notNull(),
     supportingMaterialMarkdown: text("supporting_material_markdown"),
     status: text("status").notNull().default("active"),
+    publicationStatus: text("publication_status").notNull().default("unpublished"),
+    publicationAt: timestamp("publication_at", { withTimezone: true }),
+    publicationEvidenceType: text("publication_evidence_type"),
+    publicationEvidenceValue: text("publication_evidence_value"),
+    publicationManualConfirmation: boolean("publication_manual_confirmation").notNull().default(false),
+    publishedBy: text("published_by"),
+    publicationRecordedAt: timestamp("publication_recorded_at", { withTimezone: true }),
+    categoryId: text("category_id").references(() => contentCategories.id, { onDelete: "set null" }),
+    tagsJson: jsonb("tags_json").notNull().default([]),
+    editorialInterestScore: integer("editorial_interest_score"),
+    engagementInterestCount: integer("engagement_interest_count").notNull().default(0),
     createdBy: text("created_by"),
     metadataJson: jsonb("metadata_json").notNull().default({}),
     externalSource: text("external_source"),
@@ -20,7 +46,25 @@ export const contentTopics = pgTable(
       table.externalId,
     ),
     statusIdx: index("content_topics_status_idx").on(table.status),
+    publicationIdx: index("content_topics_publication_idx").on(table.publicationStatus, table.publicationAt),
+    categoryIdx: index("content_topics_category_idx").on(table.categoryId),
   }),
+);
+
+export const contentTopicAuditEvents = pgTable(
+  "content_topic_audit_events",
+  {
+    id: text("id").primaryKey(),
+    topicId: text("topic_id").notNull().references(() => contentTopics.id, { onDelete: "cascade" }),
+    action: text("action").notNull(),
+    actor: text("actor").notNull(),
+    reason: text("reason"),
+    beforeJson: jsonb("before_json").notNull().default({}),
+    afterJson: jsonb("after_json").notNull().default({}),
+    evidenceJson: jsonb("evidence_json").notNull().default({}),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({ topicIdx: index("content_topic_audit_topic_idx").on(table.topicId, table.createdAt) }),
 );
 
 export const contentDrafts = pgTable(
@@ -169,6 +213,8 @@ export const publishingEvents = pgTable(
 
 export type ContentTopicRow = typeof contentTopics.$inferSelect;
 export type NewContentTopicRow = typeof contentTopics.$inferInsert;
+export type ContentCategoryRow = typeof contentCategories.$inferSelect;
+export type TopicAuditEventRow = typeof contentTopicAuditEvents.$inferSelect;
 export type ContentDraftRow = typeof contentDrafts.$inferSelect;
 export type NewContentDraftRow = typeof contentDrafts.$inferInsert;
 export type ContentBundleRunRow = typeof contentBundleRuns.$inferSelect;

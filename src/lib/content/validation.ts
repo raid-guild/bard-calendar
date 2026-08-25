@@ -14,6 +14,9 @@ const optionalUrl = optionalText.refine((value) => !value || z.string().url().sa
 });
 
 const metadataSchema = z.record(z.unknown()).default({});
+const tagsSchema = z.array(z.string().trim().min(1).max(40)).max(20).transform((tags) =>
+  Array.from(new Set(tags.map((tag) => tag.toLowerCase()))),
+);
 
 export const topicCreateSchema = z.object({
   title: z.string().trim().min(1, "Title is required."),
@@ -21,6 +24,10 @@ export const topicCreateSchema = z.object({
   status: z.enum(topicStatuses).default("active"),
   created_by: optionalText,
   metadata: metadataSchema.optional().default({}),
+  category_id: optionalText,
+  tags: tagsSchema.optional().default([]),
+  editorial_interest_score: z.number().int().min(0).max(100).optional().nullable(),
+  engagement_interest_count: z.number().int().min(0).optional().default(0),
   external_source: optionalText,
   external_id: optionalText,
 });
@@ -32,6 +39,42 @@ export const topicUpdateSchema = topicCreateSchema.partial().extend({
 export const topicListQuerySchema = z.object({
   status: z.enum(topicStatuses).optional(),
   search: z.string().trim().optional(),
+  publication_status: z.enum(["unpublished", "published"]).optional(),
+  publication_start: z.string().datetime({ offset: true }).optional(),
+  publication_end: z.string().datetime({ offset: true }).optional(),
+  category_id: z.string().trim().optional(),
+  tag: z.string().trim().toLowerCase().optional(),
+});
+
+export const topicPublishSchema = z.object({
+  publication_at: z.string().datetime({ offset: true }),
+  evidence_type: z.enum(["live_url", "external_post_id", "manual_confirmation"]),
+  evidence_value: optionalText,
+  manual_confirmation: z.boolean().default(false),
+  actor: z.string().trim().min(1),
+}).superRefine((value, context) => {
+  if (value.evidence_type === "manual_confirmation" && !value.manual_confirmation) {
+    context.addIssue({ code: "custom", path: ["manual_confirmation"], message: "Manual confirmation must be explicit." });
+  }
+  if (value.evidence_type !== "manual_confirmation" && !value.evidence_value) {
+    context.addIssue({ code: "custom", path: ["evidence_value"], message: "Publication evidence is required." });
+  }
+  if (value.evidence_type === "live_url" && value.evidence_value && !z.string().url().safeParse(value.evidence_value).success) {
+    context.addIssue({ code: "custom", path: ["evidence_value"], message: "Live URL must be valid." });
+  }
+});
+
+export const topicReopenSchema = z.object({
+  reason: z.string().trim().min(1, "A reopen reason is required."),
+  actor: z.string().trim().min(1),
+});
+
+export const categoryCreateSchema = z.object({
+  key: z.string().trim().min(1).max(60).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
+  name: z.string().trim().min(1).max(100),
+  active: z.boolean().default(true),
+  sort_order: z.number().int().default(0),
+  metadata: metadataSchema.optional().default({}),
 });
 
 export const agentTopicUpsertSchema = topicCreateSchema
@@ -93,6 +136,9 @@ export const draftAssignEventSchema = z.object({
 export type TopicCreateInput = z.infer<typeof topicCreateSchema>;
 export type TopicUpdateInput = z.infer<typeof topicUpdateSchema>;
 export type TopicListQuery = z.infer<typeof topicListQuerySchema>;
+export type TopicPublishInput = z.infer<typeof topicPublishSchema>;
+export type TopicReopenInput = z.infer<typeof topicReopenSchema>;
+export type CategoryCreateInput = z.infer<typeof categoryCreateSchema>;
 export type AgentTopicUpsertInput = z.infer<typeof agentTopicUpsertSchema>;
 export type DraftCreateInput = z.infer<typeof draftCreateSchema>;
 export type DraftUpdateInput = z.infer<typeof draftUpdateSchema>;

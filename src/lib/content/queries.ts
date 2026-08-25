@@ -1,8 +1,8 @@
-import { and, asc, count, eq, ilike, or } from "drizzle-orm";
-import { mapCreateDraftInputToRow, mapCreateTopicInputToRow, mapRowToDraft, mapRowToTopic, mapUpdateDraftInputToRow, mapUpdateTopicInputToRow } from "@/lib/content/mapping";
-import type { DraftAssignEventInput, DraftCreateInput, DraftListQuery, DraftUpdateInput, TopicCreateInput, TopicListQuery, TopicUpdateInput } from "@/lib/content/validation";
+import { and, asc, count, desc, eq, gte, ilike, lte, or, sql } from "drizzle-orm";
+import { mapCreateDraftInputToRow, mapCreateTopicInputToRow, mapRowToCategory, mapRowToDraft, mapRowToTopic, mapUpdateDraftInputToRow, mapUpdateTopicInputToRow } from "@/lib/content/mapping";
+import type { CategoryCreateInput, DraftAssignEventInput, DraftCreateInput, DraftListQuery, DraftUpdateInput, TopicCreateInput, TopicListQuery, TopicPublishInput, TopicReopenInput, TopicUpdateInput } from "@/lib/content/validation";
 import { getDb } from "@/lib/db/client";
-import { contentDrafts, contentTopics, draftDaggers, publishingEvents } from "@/lib/db/schema";
+import { contentCategories, contentDrafts, contentTopicAuditEvents, contentTopics, draftDaggers, publishingEvents } from "@/lib/db/schema";
 import { createEvent, updateEvent } from "@/lib/events/queries";
 
 export async function listTopics(filters: TopicListQuery = {}) {
@@ -15,6 +15,11 @@ export async function listTopics(filters: TopicListQuery = {}) {
           ilike(contentTopics.supportingMaterialMarkdown, `%${filters.search}%`),
         )
       : undefined,
+    filters.publication_status ? eq(contentTopics.publicationStatus, filters.publication_status) : undefined,
+    filters.publication_start ? gte(contentTopics.publicationAt, new Date(filters.publication_start)) : undefined,
+    filters.publication_end ? lte(contentTopics.publicationAt, new Date(filters.publication_end)) : undefined,
+    filters.category_id === "uncategorized" ? sql`${contentTopics.categoryId} is null` : filters.category_id ? eq(contentTopics.categoryId, filters.category_id) : undefined,
+    filters.tag ? sql`${contentTopics.tagsJson} @> ${JSON.stringify([filters.tag])}::jsonb` : undefined,
   ].filter(Boolean);
 
   const rows = await db
@@ -29,7 +34,9 @@ export async function listTopics(filters: TopicListQuery = {}) {
     .groupBy(contentDrafts.topicId);
   const draftCountByTopic = new Map(draftCounts.map((row) => [row.topicId, Number(row.value)]));
 
-  return rows.map((row) => mapRowToTopic(row, draftCountByTopic.get(row.id) ?? 0));
+  const categories = await db.select().from(contentCategories);
+  const categoryById = new Map(categories.map((category) => [category.id, category]));
+  return rows.map((row) => mapRowToTopic(row, draftCountByTopic.get(row.id) ?? 0, row.categoryId ? categoryById.get(row.categoryId) ?? null : null));
 }
 
 export async function getTopic(id: string) {
@@ -45,7 +52,8 @@ export async function getTopic(id: string) {
     .from(contentDrafts)
     .where(eq(contentDrafts.topicId, id));
 
-  return mapRowToTopic(row, Number(draftCount?.value ?? 0));
+  const [category] = row.categoryId ? await db.select().from(contentCategories).where(eq(contentCategories.id, row.categoryId)) : [];
+  return mapRowToTopic(row, Number(draftCount?.value ?? 0), category ?? null);
 }
 
 export async function getTopicByExternalIdentity(
@@ -73,13 +81,93 @@ export async function createTopic(input: TopicCreateInput) {
 
 export async function updateTopic(id: string, input: TopicUpdateInput) {
   const db = getDb();
-  const [row] = await db
-    .update(contentTopics)
-    .set(mapUpdateTopicInputToRow(input))
-    .where(eq(contentTopics.id, id))
-    .returning();
+  return db.transaction(async (tx) => {
+    const [before] = await tx.select().from(contentTopics).where(eq(contentTopics.id, id)).for("update");
+    if (!before) return null;
+    const [row] = await tx.update(contentTopics).set(mapUpdateTopicInputToRow(input)).where(eq(contentTopics.id, id)).returning();
+    const tracked = input.category_id !== undefined || input.tags !== undefined || input.editorial_interest_score !== undefined || input.engagement_interest_count !== undefined;
+    if (tracked) {
+      const previous = { category_id: before.categoryId, tags: before.tagsJson, editorial_interest_score: before.editorialInterestScore, engagement_interest_count: before.engagementInterestCount };
+      const next = { category_id: row.categoryId, tags: row.tagsJson, editorial_interest_score: row.editorialInterestScore, engagement_interest_count: row.engagementInterestCount };
+      await tx.insert(contentTopicAuditEvents).values({ id: `tae_${crypto.randomUUID()}`, topicId: id, action: "classification_updated", actor: input.created_by ?? "system", beforeJson: previous, afterJson: next, evidenceJson: {} });
+    }
+    return mapRowToTopic(row);
+  });
+}
 
-  return row ? mapRowToTopic(row) : null;
+export async function listCategories(includeInactive = false) {
+  const rows = await getDb().select().from(contentCategories)
+    .where(includeInactive ? undefined : eq(contentCategories.active, true))
+    .orderBy(asc(contentCategories.sortOrder), asc(contentCategories.name));
+  return rows.map(mapRowToCategory);
+}
+
+export async function createCategory(input: CategoryCreateInput) {
+  const now = new Date();
+  const [row] = await getDb().insert(contentCategories).values({
+    id: `cat_${crypto.randomUUID()}`, key: input.key, name: input.name, active: input.active,
+    sortOrder: input.sort_order, metadataJson: input.metadata, createdAt: now, updatedAt: now,
+  }).returning();
+  return mapRowToCategory(row);
+}
+
+function publicationSnapshot(row: typeof contentTopics.$inferSelect) {
+  return {
+    publication_status: row.publicationStatus,
+    publication_at: row.publicationAt?.toISOString() ?? null,
+    evidence_type: row.publicationEvidenceType,
+    evidence_value: row.publicationEvidenceValue,
+    manual_confirmation: row.publicationManualConfirmation,
+    published_by: row.publishedBy,
+  };
+}
+
+export async function publishTopic(id: string, input: TopicPublishInput) {
+  const db = getDb();
+  return db.transaction(async (tx) => {
+    const [before] = await tx.select().from(contentTopics).where(eq(contentTopics.id, id)).for("update");
+    if (!before) return null;
+    const recordedAt = new Date();
+    const [after] = await tx.update(contentTopics).set({
+      publicationStatus: "published", publicationAt: new Date(input.publication_at),
+      publicationEvidenceType: input.evidence_type, publicationEvidenceValue: input.evidence_value,
+      publicationManualConfirmation: input.manual_confirmation, publishedBy: input.actor,
+      publicationRecordedAt: recordedAt, updatedAt: recordedAt,
+    }).where(eq(contentTopics.id, id)).returning();
+    await tx.insert(contentTopicAuditEvents).values({
+      id: `tae_${crypto.randomUUID()}`, topicId: id, action: "published", actor: input.actor,
+      beforeJson: publicationSnapshot(before), afterJson: publicationSnapshot(after),
+      evidenceJson: { type: input.evidence_type, value: input.evidence_value, manual_confirmation: input.manual_confirmation },
+    });
+    return mapRowToTopic(after);
+  });
+}
+
+export async function reopenTopic(id: string, input: TopicReopenInput) {
+  const db = getDb();
+  return db.transaction(async (tx) => {
+    const [before] = await tx.select().from(contentTopics).where(eq(contentTopics.id, id)).for("update");
+    if (!before) return null;
+    const [after] = await tx.update(contentTopics).set({
+      publicationStatus: "unpublished", publicationAt: null, publicationEvidenceType: null,
+      publicationEvidenceValue: null, publicationManualConfirmation: false, publishedBy: null,
+      publicationRecordedAt: null, updatedAt: new Date(),
+    }).where(eq(contentTopics.id, id)).returning();
+    await tx.insert(contentTopicAuditEvents).values({
+      id: `tae_${crypto.randomUUID()}`, topicId: id, action: "reopened", actor: input.actor,
+      reason: input.reason, beforeJson: publicationSnapshot(before), afterJson: publicationSnapshot(after),
+      evidenceJson: {},
+    });
+    return mapRowToTopic(after);
+  });
+}
+
+export async function listTopicAuditEvents(topicId: string) {
+  const rows = await getDb().select().from(contentTopicAuditEvents)
+    .where(eq(contentTopicAuditEvents.topicId, topicId)).orderBy(desc(contentTopicAuditEvents.createdAt));
+  return rows.map((row) => ({ id: row.id, topic_id: row.topicId, action: row.action, actor: row.actor,
+    reason: row.reason, before: row.beforeJson, after: row.afterJson, evidence: row.evidenceJson,
+    created_at: row.createdAt.toISOString() }));
 }
 
 export async function deleteTopic(id: string) {

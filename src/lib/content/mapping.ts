@@ -1,4 +1,4 @@
-import type { ContentDraftRow, ContentTopicRow, NewContentDraftRow, NewContentTopicRow } from "@/lib/db/schema";
+import type { ContentCategoryRow, ContentDraftRow, ContentTopicRow, NewContentDraftRow, NewContentTopicRow } from "@/lib/db/schema";
 import type { DraftCreateInput, DraftUpdateInput, TopicCreateInput, TopicUpdateInput } from "@/lib/content/validation";
 
 export function createTopicId() {
@@ -9,12 +9,28 @@ export function createDraftId() {
   return `drf_${crypto.randomUUID()}`;
 }
 
-export function mapRowToTopic(row: ContentTopicRow, draftCount = 0) {
+export function mapRowToCategory(row: ContentCategoryRow) {
+  return { id: row.id, key: row.key, name: row.name, active: row.active, sort_order: row.sortOrder, metadata: (row.metadataJson ?? {}) as Record<string, unknown> };
+}
+
+export function mapRowToTopic(row: ContentTopicRow, draftCount = 0, category: ContentCategoryRow | null = null) {
   return {
     id: row.id,
     title: row.title,
     supporting_material_markdown: row.supportingMaterialMarkdown,
     status: row.status,
+    publication_status: row.publicationStatus as "unpublished" | "published",
+    publication_at: row.publicationAt?.toISOString() ?? null,
+    publication_evidence_type: row.publicationEvidenceType,
+    publication_evidence_value: row.publicationEvidenceValue,
+    publication_manual_confirmation: row.publicationManualConfirmation,
+    published_by: row.publishedBy,
+    publication_recorded_at: row.publicationRecordedAt?.toISOString() ?? null,
+    category_id: row.categoryId,
+    category: category ? mapRowToCategory(category) : null,
+    tags: Array.isArray(row.tagsJson) ? row.tagsJson as string[] : [],
+    editorial_interest_score: row.editorialInterestScore,
+    engagement_interest_count: row.engagementInterestCount,
     created_by: row.createdBy,
     metadata: (row.metadataJson ?? {}) as Record<string, unknown>,
     external_source: row.externalSource,
@@ -33,6 +49,10 @@ export function mapCreateTopicInputToRow(input: TopicCreateInput): NewContentTop
     title: input.title,
     supportingMaterialMarkdown: input.supporting_material_markdown,
     status: input.status,
+    categoryId: input.category_id,
+    tagsJson: input.tags ?? [],
+    editorialInterestScore: input.editorial_interest_score,
+    engagementInterestCount: input.engagement_interest_count ?? 0,
     createdBy: input.created_by,
     metadataJson: input.metadata ?? {},
     externalSource: input.external_source,
@@ -49,6 +69,10 @@ export function mapUpdateTopicInputToRow(input: TopicUpdateInput) {
       ? { supportingMaterialMarkdown: input.supporting_material_markdown }
       : {}),
     ...(input.status !== undefined ? { status: input.status } : {}),
+    ...(input.category_id !== undefined ? { categoryId: input.category_id } : {}),
+    ...(input.tags !== undefined ? { tagsJson: input.tags } : {}),
+    ...(input.editorial_interest_score !== undefined ? { editorialInterestScore: input.editorial_interest_score } : {}),
+    ...(input.engagement_interest_count !== undefined ? { engagementInterestCount: input.engagement_interest_count } : {}),
     ...(input.created_by !== undefined ? { createdBy: input.created_by } : {}),
     ...(input.metadata !== undefined ? { metadataJson: input.metadata } : {}),
     ...(input.external_source !== undefined ? { externalSource: input.external_source } : {}),

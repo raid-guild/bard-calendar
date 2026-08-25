@@ -66,6 +66,7 @@ import {
 } from "@/lib/content/constants";
 import type {
   ContentDraft,
+  ContentCategory,
   ContentTopic,
   DraftPayload,
   TopicPayload,
@@ -75,6 +76,7 @@ import { formatDateTime, toDatetimeLocalValue } from "@/lib/dates";
 
 type DraftsViewProps = {
   topics: ContentTopic[];
+  categories: ContentCategory[];
   drafts: ContentDraft[];
   focusedTopicId?: string | null;
   focusedDraftId?: string | null;
@@ -89,6 +91,8 @@ type DraftsViewProps = {
     draft: ContentDraft | null,
     payload: DraftPayload,
   ) => Promise<void>;
+  onPublishTopic: (topic: ContentTopic, publicationAt: string, liveUrl: string) => Promise<void>;
+  onReopenTopic: (topic: ContentTopic, reason: string) => Promise<void>;
   onToggleDagger: (draft: ContentDraft) => Promise<void>;
   onArchiveDraft: (draft: ContentDraft) => Promise<void>;
   onAssignDraft: (
@@ -109,6 +113,10 @@ type TopicForm = {
   title: string;
   supporting_material_markdown: string;
   status: string;
+  category_id: string;
+  tags: string;
+  editorial_interest_score: string;
+  engagement_interest_count: string;
 };
 
 type DraftForm = {
@@ -145,6 +153,10 @@ function topicForm(topic: ContentTopic | null): TopicForm {
     title: topic?.title ?? "",
     supporting_material_markdown: topic?.supporting_material_markdown ?? "",
     status: topic?.status ?? "active",
+    category_id: topic?.category_id ?? "uncategorized",
+    tags: topic?.tags?.join(", ") ?? "",
+    editorial_interest_score: topic?.editorial_interest_score?.toString() ?? "",
+    engagement_interest_count: topic?.engagement_interest_count?.toString() ?? "0",
   };
 }
 
@@ -161,6 +173,7 @@ function draftForm(draft: ContentDraft | null, topicId: string): DraftForm {
 
 export function DraftsView({
   topics,
+  categories,
   drafts,
   focusedTopicId,
   focusedDraftId,
@@ -169,6 +182,8 @@ export function DraftsView({
   saving,
   onSaveTopic,
   onSaveDraft,
+  onPublishTopic,
+  onReopenTopic,
   onToggleDagger,
   onArchiveDraft,
   onAssignDraft,
@@ -179,6 +194,9 @@ export function DraftsView({
   const [topicState, setTopicState] = useState<TopicForm>(() =>
     topicForm(null),
   );
+  const [publicationAt, setPublicationAt] = useState(() => toDatetimeLocalValue(new Date()));
+  const [publicationUrl, setPublicationUrl] = useState("");
+  const [reopenReason, setReopenReason] = useState("");
   const [editingDraft, setEditingDraft] = useState<ContentDraft | null>(null);
   const [newDraftTopicId, setNewDraftTopicId] = useState<string | null>(null);
   const [draftOpen, setDraftOpen] = useState(false);
@@ -401,6 +419,10 @@ export function DraftsView({
         topicState.supporting_material_markdown,
       ),
       status: topicState.status,
+      category_id: topicState.category_id === "uncategorized" ? null : topicState.category_id,
+      tags: topicState.tags.split(",").map((tag) => tag.trim()).filter(Boolean),
+      editorial_interest_score: topicState.editorial_interest_score ? Number(topicState.editorial_interest_score) : null,
+      engagement_interest_count: Number(topicState.engagement_interest_count || 0),
     });
     setTopicOpen(false);
   };
@@ -836,6 +858,48 @@ export function DraftsView({
                   </SelectContent>
                 </Select>
               </div>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="grid gap-2">
+                  <Label>Category</Label>
+                  <Select value={topicState.category_id} onValueChange={(category_id) => setTopicState((current) => ({ ...current, category_id }))}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="uncategorized">Uncategorized</SelectItem>
+                      {categories.map((category) => <SelectItem key={category.id} value={category.id}>{category.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="topic-tags">Tags (comma-separated)</Label>
+                  <Input id="topic-tags" value={topicState.tags} onChange={(event) => setTopicState((current) => ({ ...current, tags: event.target.value }))} />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="topic-editorial-interest">Editorial interest (0–100)</Label>
+                  <Input id="topic-editorial-interest" type="number" min="0" max="100" value={topicState.editorial_interest_score} onChange={(event) => setTopicState((current) => ({ ...current, editorial_interest_score: event.target.value }))} />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="topic-engagement-interest">Engagement count</Label>
+                  <Input id="topic-engagement-interest" type="number" min="0" value={topicState.engagement_interest_count} onChange={(event) => setTopicState((current) => ({ ...current, engagement_interest_count: event.target.value }))} />
+                </div>
+              </div>
+              {editingTopic ? (
+                <div className="space-y-3 border border-border bg-muted/20 p-4">
+                  <div className="font-mono text-xs uppercase tracking-[0.14em]">Publication: {editingTopic.publication_status ?? "unpublished"}</div>
+                  {editingTopic.publication_status === "published" ? (
+                    <div className="grid gap-2 md:grid-cols-[1fr_auto]">
+                      <Input aria-label="Reopen reason" placeholder="Reason for reopening" value={reopenReason} onChange={(event) => setReopenReason(event.target.value)} />
+                      <Button type="button" variant="outline" disabled={!reopenReason.trim() || saving} onClick={async () => { await onReopenTopic(editingTopic, reopenReason); setTopicOpen(false); }}>Reopen topic</Button>
+                    </div>
+                  ) : (
+                    <div className="grid gap-2 md:grid-cols-[1fr_1fr_auto]">
+                      <Input type="datetime-local" aria-label="Publication date" value={publicationAt} onChange={(event) => setPublicationAt(event.target.value)} />
+                      <Input type="url" aria-label="Live URL" placeholder="Live URL (optional with manual confirmation)" value={publicationUrl} onChange={(event) => setPublicationUrl(event.target.value)} />
+                      <Button type="button" variant="outline" disabled={saving} onClick={async () => { await onPublishTopic(editingTopic, new Date(publicationAt).toISOString(), publicationUrl); setTopicOpen(false); }}>Mark published</Button>
+                    </div>
+                  )}
+                  {editingTopic.publication_recorded_at ? <div className="text-xs text-muted-foreground">Recorded {formatDateTime(editingTopic.publication_recorded_at)} by {editingTopic.published_by}</div> : null}
+                </div>
+              ) : null}
               <div className="grid gap-2">
                 <Label htmlFor="topic-material">Supporting material</Label>
                 <Textarea
