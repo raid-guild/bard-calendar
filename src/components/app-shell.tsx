@@ -40,8 +40,11 @@ import {
   assignDraftToEvent,
   createDraft,
   createTopic,
+  fetchCategories,
   fetchDrafts,
   fetchTopics,
+  publishTopic,
+  reopenTopic,
   toggleDraftDagger,
   updateDraft,
   updateTopic,
@@ -153,6 +156,7 @@ export function AppShell() {
     queryFn: fetchTopics,
     enabled: canView,
   });
+  const categoriesQuery = useQuery({ queryKey: ["categories"], queryFn: fetchCategories, enabled: canView });
 
   const draftsQuery = useQuery({
     queryKey: ["drafts"],
@@ -208,6 +212,16 @@ export function AppShell() {
       await Promise.all([invalidateDrafts(), invalidateTopics()]);
       toast.success("Draft saved.");
     },
+    onError: (error) => toast.error(error.message),
+  });
+  const publishTopicMutation = useMutation({
+    mutationFn: ({ topic, publicationAt, liveUrl }: { topic: ContentTopic; publicationAt: string; liveUrl: string }) => publishTopic(topic.id, liveUrl ? { publication_at: publicationAt, evidence_type: "live_url", evidence_value: liveUrl, manual_confirmation: false } : { publication_at: publicationAt, evidence_type: "manual_confirmation", manual_confirmation: true }),
+    onSuccess: async () => { await invalidateTopics(); toast.success("Topic marked published."); },
+    onError: (error) => toast.error(error.message),
+  });
+  const reopenTopicMutation = useMutation({
+    mutationFn: ({ topic, reason }: { topic: ContentTopic; reason: string }) => reopenTopic(topic.id, reason),
+    onSuccess: async () => { await invalidateTopics(); toast.success("Topic reopened."); },
     onError: (error) => toast.error(error.message),
   });
 
@@ -472,12 +486,17 @@ export function AppShell() {
           <TabsContent value="calendar" className="m-0 space-y-4">
             <CalendarView
               events={events}
+              topics={topics}
               date={date}
               view={view}
               onDateChange={setDate}
               onViewChange={setView}
               onSelectSlot={openNewEvent}
               onSelectEvent={openExistingEvent}
+              onSelectTopic={(topic) => {
+                setFocusedTopicId(topic.id);
+                setActiveTab("drafts");
+              }}
               canEdit={canEdit}
             />
           </TabsContent>
@@ -490,6 +509,7 @@ export function AppShell() {
           <TabsContent value="drafts" className="m-0">
             <DraftsView
               topics={topics}
+              categories={categoriesQuery.data ?? []}
               drafts={drafts}
               focusedTopicId={focusedTopicId}
               focusedDraftId={focusedDraftId}
@@ -506,6 +526,8 @@ export function AppShell() {
               onSaveDraft={async (draft, payload) => {
                 await saveDraftMutation.mutateAsync({ draft, payload });
               }}
+              onPublishTopic={async (topic, publicationAt, liveUrl) => { await publishTopicMutation.mutateAsync({ topic, publicationAt, liveUrl }); }}
+              onReopenTopic={async (topic, reason) => { await reopenTopicMutation.mutateAsync({ topic, reason }); }}
               onToggleDagger={async (draft) => {
                 await daggerMutation.mutateAsync(draft);
               }}
