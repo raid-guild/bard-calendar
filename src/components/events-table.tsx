@@ -48,15 +48,18 @@ export function EventsTable({ events, onSelectEvent }: EventsTableProps) {
             <TableHead className="font-mono text-[11px] uppercase tracking-[0.14em]">Type</TableHead>
             <TableHead className="font-mono text-[11px] uppercase tracking-[0.14em]">Campaign</TableHead>
             <TableHead className="font-mono text-[11px] uppercase tracking-[0.14em]">Owner</TableHead>
+            <TableHead className="font-mono text-[11px] uppercase tracking-[0.14em]">Publisher</TableHead>
+            <TableHead className="font-mono text-[11px] uppercase tracking-[0.14em]">Attribution</TableHead>
             <TableHead className="font-mono text-[11px] uppercase tracking-[0.14em]">Draft</TableHead>
             <TableHead className="font-mono text-[11px] uppercase tracking-[0.14em]">Media</TableHead>
+            <TableHead className="font-mono text-[11px] uppercase tracking-[0.14em]">Live</TableHead>
             <TableHead className="font-mono text-[11px] uppercase tracking-[0.14em]">Updated</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {events.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={10} className="h-28 text-center text-muted-foreground">
+              <TableCell colSpan={12} className="h-28 text-center text-muted-foreground">
                 No events found.
               </TableCell>
             </TableRow>
@@ -80,11 +83,16 @@ export function EventsTable({ events, onSelectEvent }: EventsTableProps) {
                 <TableCell>{event.content_type ?? "-"}</TableCell>
                 <TableCell>{event.campaign ?? "-"}</TableCell>
                 <TableCell>{event.owner ?? "-"}</TableCell>
+                <TableCell>{event.publisher_account ?? "-"}</TableCell>
+                <TableCell>{event.attribution ?? "-"}</TableCell>
                 <TableCell>
                   <LinkCell href={event.draft_url} />
                 </TableCell>
                 <TableCell>
                   <LinkCell href={event.media_url} />
+                </TableCell>
+                <TableCell>
+                  <LinkCell href={event.live_url} />
                 </TableCell>
                 <TableCell className="whitespace-nowrap font-mono text-xs text-muted-foreground">
                   {formatDateTime(event.updated_at)}

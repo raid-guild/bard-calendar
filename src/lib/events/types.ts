@@ -7,6 +7,8 @@ export type PublishingEvent = {
   content_type: string | null;
   campaign: string | null;
   owner: string | null;
+  attribution: string | null;
+  publisher_account: string | null;
   draft_url: string | null;
   media_url: string | null;
   live_url: string | null;
@@ -28,6 +30,8 @@ export type EventPayload = {
   content_type?: string | null;
   campaign?: string | null;
   owner?: string | null;
+  attribution?: string | null;
+  publisher_account?: string | null;
   draft_url?: string | null;
   media_url?: string | null;
   live_url?: string | null;
@@ -43,6 +47,10 @@ export type EventFilters = {
   target_channel?: string;
   status?: string;
   owner?: string;
+  campaign?: string;
+  attribution?: string;
+  publisher_account?: string;
+  order?: "asc" | "desc";
   name?: string;
   search?: string;
   topic_id?: string;

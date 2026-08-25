@@ -84,10 +84,23 @@ export const draftAssignEventSchema = z.object({
   content_type: optionalText,
   campaign: optionalText,
   owner: optionalText,
+  attribution: optionalText,
+  publisher_account: optionalText,
   media_url: optionalUrl,
   live_url: optionalUrl,
   notes: optionalText,
   metadata: metadataSchema.optional().default({}),
+});
+
+export const draftMarkPublishedSchema = z.object({
+  live_url: z.string().trim().url("A valid live URL is required."),
+  published_at: z.string().datetime({ offset: true }),
+  attribution: optionalText,
+  publisher_account: optionalText,
+  campaign: optionalText,
+  owner: optionalText,
+  name: optionalText,
+  notes: optionalText,
 });
 
 export type TopicCreateInput = z.infer<typeof topicCreateSchema>;
@@ -99,3 +112,4 @@ export type DraftUpdateInput = z.infer<typeof draftUpdateSchema>;
 export type DraftListQuery = z.infer<typeof draftListQuerySchema>;
 export type AgentDraftUpsertInput = z.infer<typeof agentDraftUpsertSchema>;
 export type DraftAssignEventInput = z.infer<typeof draftAssignEventSchema>;
+export type DraftMarkPublishedInput = z.infer<typeof draftMarkPublishedSchema>;

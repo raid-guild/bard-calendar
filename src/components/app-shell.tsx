@@ -54,7 +54,7 @@ import type {
 } from "@/lib/events/types";
 import { fetchPortalSession } from "@/lib/session/client";
 
-type WorkspaceTab = "calendar" | "list" | "drafts";
+type WorkspaceTab = "calendar" | "list" | "published" | "drafts";
 
 function rangeFor(date: Date, view: View) {
   if (view === "week") {
@@ -109,7 +109,7 @@ export function AppShell() {
     const params = new URLSearchParams(window.location.search);
     const tab = params.get("tab");
 
-    if (tab === "calendar" || tab === "list" || tab === "drafts") {
+    if (tab === "calendar" || tab === "list" || tab === "published" || tab === "drafts") {
       setActiveTab(tab);
     }
 
@@ -117,14 +117,10 @@ export function AppShell() {
     setFocusedDraftId(params.get("draft"));
     setAssigningDraftId(params.get("assign"));
   }, []);
-  const queryFilters = useMemo(
-    () => ({
-      ...filters,
-      start: filters.start ?? range.start,
-      end: filters.end ?? range.end,
-    }),
-    [filters, range.end, range.start],
-  );
+  const queryFilters = useMemo(() => activeTab === "published"
+    ? { ...filters, status: "published" as const, order: "desc" as const }
+    : { ...filters, start: filters.start ?? range.start, end: filters.end ?? range.end },
+    [activeTab, filters, range.end, range.start]);
 
   const sessionQuery = useQuery({
     queryKey: ["portal-session"],
@@ -361,7 +357,7 @@ export function AppShell() {
           className="space-y-4"
         >
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <TabsList className="grid w-full grid-cols-3 rounded-sm border border-border bg-muted/40 lg:w-[420px]">
+            <TabsList className="grid w-full grid-cols-4 rounded-sm border border-border bg-muted/40 lg:w-[560px]">
               <TabsTrigger
                 value="calendar"
                 className="rounded-sm font-mono text-xs uppercase tracking-[0.14em]"
@@ -373,6 +369,12 @@ export function AppShell() {
                 className="rounded-sm font-mono text-xs uppercase tracking-[0.14em]"
               >
                 List
+              </TabsTrigger>
+              <TabsTrigger
+                value="published"
+                className="rounded-sm font-mono text-xs uppercase tracking-[0.14em]"
+              >
+                Published
               </TabsTrigger>
               <TabsTrigger
                 value="drafts"
@@ -484,6 +486,11 @@ export function AppShell() {
 
           <TabsContent value="list" className="m-0 space-y-0">
             <Filters filters={filters} onChange={setFilters} />
+            <EventsTable events={events} onSelectEvent={openExistingEvent} />
+          </TabsContent>
+
+          <TabsContent value="published" className="m-0 space-y-0">
+            <Filters filters={{ ...filters, status: "published" }} onChange={setFilters} />
             <EventsTable events={events} onSelectEvent={openExistingEvent} />
           </TabsContent>
 

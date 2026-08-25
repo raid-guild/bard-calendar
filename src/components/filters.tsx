@@ -69,6 +69,24 @@ export function Filters({ filters, onChange }: FiltersProps) {
         placeholder="Owner"
         className="h-9 rounded-sm lg:w-[150px]"
       />
+      <Input
+        value={filters.campaign ?? ""}
+        onChange={(event) => onChange({ ...filters, campaign: event.target.value || undefined })}
+        placeholder="Campaign"
+        className="h-9 rounded-sm lg:w-[150px]"
+      />
+      <Input
+        value={filters.publisher_account ?? ""}
+        onChange={(event) => onChange({ ...filters, publisher_account: event.target.value || undefined })}
+        placeholder="Publisher"
+        className="h-9 rounded-sm lg:w-[150px]"
+      />
+      <Input
+        value={filters.attribution ?? ""}
+        onChange={(event) => onChange({ ...filters, attribution: event.target.value || undefined })}
+        placeholder="Attribution"
+        className="h-9 rounded-sm lg:w-[150px]"
+      />
     </div>
   );
 }

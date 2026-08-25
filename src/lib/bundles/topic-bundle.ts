@@ -1,5 +1,6 @@
 import { listBundleRuns, listContentAssets } from "@/lib/bundles/queries";
 import { getTopic, listDrafts } from "@/lib/content/queries";
+import { listEvents } from "@/lib/events/queries";
 
 export async function getTopicBundle(
   topicId: string,
@@ -11,10 +12,11 @@ export async function getTopicBundle(
     return null;
   }
 
-  const [drafts, runs, assets] = await Promise.all([
+  const [drafts, runs, assets, publishingEvents] = await Promise.all([
     listDrafts({ topic_id: topicId }, portalUserId),
     listBundleRuns(topicId),
     listContentAssets(topicId),
+    listEvents({ topic_id: topicId, status: "published", order: "desc" }),
   ]);
 
   return {
@@ -22,6 +24,7 @@ export async function getTopicBundle(
     drafts,
     runs,
     assets,
+    publishing_events: publishingEvents,
     latest_run: runs[0] ?? null,
   };
 }

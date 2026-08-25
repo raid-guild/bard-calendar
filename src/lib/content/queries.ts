@@ -1,9 +1,11 @@
 import { and, asc, count, eq, ilike, or } from "drizzle-orm";
 import { mapCreateDraftInputToRow, mapCreateTopicInputToRow, mapRowToDraft, mapRowToTopic, mapUpdateDraftInputToRow, mapUpdateTopicInputToRow } from "@/lib/content/mapping";
-import type { DraftAssignEventInput, DraftCreateInput, DraftListQuery, DraftUpdateInput, TopicCreateInput, TopicListQuery, TopicUpdateInput } from "@/lib/content/validation";
+import type { DraftAssignEventInput, DraftCreateInput, DraftListQuery, DraftMarkPublishedInput, DraftUpdateInput, TopicCreateInput, TopicListQuery, TopicUpdateInput } from "@/lib/content/validation";
 import { getDb } from "@/lib/db/client";
 import { contentDrafts, contentTopics, draftDaggers, publishingEvents } from "@/lib/db/schema";
 import { createEvent, updateEvent } from "@/lib/events/queries";
+import { createEventId, mapRowToEvent } from "@/lib/events/mapping";
+import { LiveUrlConflictError, normalizeLiveUrl } from "@/lib/events/live-url";
 
 export async function listTopics(filters: TopicListQuery = {}) {
   const db = getDb();
@@ -259,6 +261,8 @@ export async function assignDraftToEvent(draftId: string, input: DraftAssignEven
     content_type: input.content_type,
     campaign: input.campaign,
     owner: input.owner,
+    attribution: input.attribution,
+    publisher_account: input.publisher_account,
     draft_url: draft.external_draft_url,
     media_url: input.media_url,
     live_url: input.live_url,
@@ -278,4 +282,52 @@ export async function assignDraftToEvent(draftId: string, input: DraftAssignEven
   await updateDraft(draft.id, { status: "assigned" });
 
   return event;
+}
+
+export async function markDraftPublished(draftId: string, input: DraftMarkPublishedInput) {
+  const db = getDb();
+  const liveUrl = normalizeLiveUrl(input.live_url);
+
+  return db.transaction(async (tx) => {
+    const [draft] = await tx.select().from(contentDrafts).where(eq(contentDrafts.id, draftId));
+    if (!draft) return null;
+
+    const [urlOwner] = await tx
+      .select({ id: publishingEvents.id, draftId: publishingEvents.draftId })
+      .from(publishingEvents)
+      .where(eq(publishingEvents.liveUrl, liveUrl));
+    if (urlOwner && urlOwner.draftId !== draftId) throw new LiveUrlConflictError();
+
+    const linked = await tx
+      .select()
+      .from(publishingEvents)
+      .where(eq(publishingEvents.draftId, draftId))
+      .orderBy(asc(publishingEvents.createdAt));
+    const existing = urlOwner
+      ? linked.find((event) => event.id === urlOwner.id)
+      : linked[0];
+    const now = new Date();
+    const values = {
+      name: input.name ?? draft.title,
+      publishAt: new Date(input.published_at),
+      targetChannel: draft.targetChannel,
+      status: "published",
+      campaign: input.campaign,
+      owner: input.owner,
+      attribution: input.attribution,
+      publisherAccount: input.publisher_account,
+      draftUrl: draft.externalDraftUrl,
+      liveUrl,
+      topicId: draft.topicId,
+      draftId: draft.id,
+      notes: input.notes,
+      updatedAt: now,
+    };
+    const [event] = existing
+      ? await tx.update(publishingEvents).set(values).where(eq(publishingEvents.id, existing.id)).returning()
+      : await tx.insert(publishingEvents).values({ id: createEventId(), ...values, createdAt: now }).returning();
+
+    await tx.update(contentDrafts).set({ status: "published", updatedAt: now }).where(eq(contentDrafts.id, draft.id));
+    return mapRowToEvent(event);
+  });
 }

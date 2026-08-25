@@ -635,6 +635,7 @@ export function TopicBundleWorkspace({ topicId }: { topicId: string }) {
     ? run.audit_checks
     : bundleAuditChecks(topic);
   const assets = bundle.assets;
+  const publishedOutputs = bundle.publishing_events;
   const readyDrafts = drafts.filter((draft) =>
     ["ready", "assigned", "published"].includes(draft.status),
   ).length;
@@ -867,6 +868,33 @@ export function TopicBundleWorkspace({ topicId }: { topicId: string }) {
             </dl>
           </section>
         </div>
+
+        <section>
+          <div className="mb-3 flex items-end justify-between gap-3">
+            <div>
+              <div className="font-mono text-[11px] uppercase tracking-[0.14em] text-primary">Feedback loop</div>
+              <h2 className="mt-1 font-heading text-2xl">Published Outputs</h2>
+            </div>
+            <span className="font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground">{publishedOutputs.length} live</span>
+          </div>
+          {publishedOutputs.length ? (
+            <div className="grid gap-3 lg:grid-cols-2">
+              {publishedOutputs.map((output) => (
+                <article key={output.id} className="border border-border bg-card/50 p-4">
+                  <div className="flex flex-wrap items-center gap-2"><ChannelBadge channel={output.target_channel} /><StatusBadge status={output.status} /></div>
+                  <h3 className="mt-3 font-heading text-lg">{output.name}</h3>
+                  <div className="mt-2 grid gap-1 text-sm text-muted-foreground">
+                    <span>{displayDateTime(output.publish_at)}</span>
+                    <span>{output.publisher_account ?? output.owner ?? "Publisher not recorded"}</span>
+                    <span>{output.attribution ? `By ${output.attribution}` : "Attribution not recorded"}</span>
+                    {output.campaign ? <span>Campaign: {output.campaign}</span> : null}
+                  </div>
+                  {output.live_url ? <Button variant="outline" size="sm" className="mt-4 rounded-sm" asChild><a href={output.live_url} target="_blank" rel="noopener noreferrer"><ExternalLink className="h-4 w-4" />View live post</a></Button> : null}
+                </article>
+              ))}
+            </div>
+          ) : <div className="border border-dashed border-border bg-card/30 p-8 text-center text-sm text-muted-foreground">No published outputs are linked to this Topic yet.</div>}
+        </section>
 
         <section>
           <div className="mb-3 flex flex-wrap items-end justify-between gap-3">

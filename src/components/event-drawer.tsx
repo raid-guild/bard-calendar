@@ -41,6 +41,8 @@ type FormState = {
   content_type: string;
   campaign: string;
   owner: string;
+  attribution: string;
+  publisher_account: string;
   draft_url: string;
   media_url: string;
   live_url: string;
@@ -57,6 +59,8 @@ function emptyState(initialDate: Date): FormState {
     content_type: "",
     campaign: "",
     owner: "",
+    attribution: "",
+    publisher_account: "",
     draft_url: "",
     media_url: "",
     live_url: "",
@@ -74,6 +78,8 @@ function stateFromEvent(event: PublishingEvent): FormState {
     content_type: event.content_type ?? "",
     campaign: event.campaign ?? "",
     owner: event.owner ?? "",
+    attribution: event.attribution ?? "",
+    publisher_account: event.publisher_account ?? "",
     draft_url: event.draft_url ?? "",
     media_url: event.media_url ?? "",
     live_url: event.live_url ?? "",
@@ -150,6 +156,8 @@ export function EventDrawer({
       content_type: optional(form.content_type),
       campaign: optional(form.campaign),
       owner: optional(form.owner),
+      attribution: optional(form.attribution),
+      publisher_account: optional(form.publisher_account),
       draft_url: optional(form.draft_url),
       media_url: optional(form.media_url),
       live_url: optional(form.live_url),
@@ -199,6 +207,17 @@ export function EventDrawer({
                   disabled={readOnly}
                   className="rounded-sm"
                 />
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="grid gap-2">
+                  <Label htmlFor="publisher_account">Publisher account</Label>
+                  <Input id="publisher_account" value={form.publisher_account} onChange={(inputEvent) => setField("publisher_account", inputEvent.target.value)} disabled={readOnly} className="rounded-sm" />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="attribution">Attribution</Label>
+                  <Input id="attribution" value={form.attribution} onChange={(inputEvent) => setField("attribution", inputEvent.target.value)} disabled={readOnly} className="rounded-sm" />
+                </div>
               </div>
 
               <div className="grid gap-4 md:grid-cols-2">
