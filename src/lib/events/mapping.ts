@@ -1,5 +1,6 @@
 import type { PublishingEventRow, NewPublishingEventRow } from "@/lib/db/schema";
 import type { EventCreateInput, EventUpdateInput } from "@/lib/events/validation";
+import { normalizeLiveUrl } from "@/lib/events/live-url";
 
 export type PublishingEvent = {
   id: string;
@@ -10,6 +11,8 @@ export type PublishingEvent = {
   content_type: string | null;
   campaign: string | null;
   owner: string | null;
+  attribution: string | null;
+  publisher_account: string | null;
   draft_url: string | null;
   media_url: string | null;
   live_url: string | null;
@@ -37,6 +40,8 @@ export function mapRowToEvent(row: PublishingEventRow): PublishingEvent {
     content_type: row.contentType,
     campaign: row.campaign,
     owner: row.owner,
+    attribution: row.attribution,
+    publisher_account: row.publisherAccount,
     draft_url: row.draftUrl,
     media_url: row.mediaUrl,
     live_url: row.liveUrl,
@@ -63,9 +68,11 @@ export function mapCreateInputToRow(input: EventCreateInput): NewPublishingEvent
     contentType: input.content_type,
     campaign: input.campaign,
     owner: input.owner,
+    attribution: input.attribution,
+    publisherAccount: input.publisher_account,
     draftUrl: input.draft_url,
     mediaUrl: input.media_url,
-    liveUrl: input.live_url,
+    liveUrl: input.live_url ? normalizeLiveUrl(input.live_url) : input.live_url,
     topicId: input.topic_id,
     draftId: input.draft_id,
     notes: input.notes,
@@ -86,9 +93,11 @@ export function mapUpdateInputToRow(input: EventUpdateInput) {
     ...(input.content_type !== undefined ? { contentType: input.content_type } : {}),
     ...(input.campaign !== undefined ? { campaign: input.campaign } : {}),
     ...(input.owner !== undefined ? { owner: input.owner } : {}),
+    ...(input.attribution !== undefined ? { attribution: input.attribution } : {}),
+    ...(input.publisher_account !== undefined ? { publisherAccount: input.publisher_account } : {}),
     ...(input.draft_url !== undefined ? { draftUrl: input.draft_url } : {}),
     ...(input.media_url !== undefined ? { mediaUrl: input.media_url } : {}),
-    ...(input.live_url !== undefined ? { liveUrl: input.live_url } : {}),
+    ...(input.live_url !== undefined ? { liveUrl: input.live_url ? normalizeLiveUrl(input.live_url) : input.live_url } : {}),
     ...(input.topic_id !== undefined ? { topicId: input.topic_id } : {}),
     ...(input.draft_id !== undefined ? { draftId: input.draft_id } : {}),
     ...(input.notes !== undefined ? { notes: input.notes } : {}),

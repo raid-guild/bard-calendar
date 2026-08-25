@@ -63,5 +63,6 @@ export type TopicBundle = {
   drafts: import("@/lib/content/types").ContentDraft[];
   runs: ContentBundleRun[];
   assets: ContentAsset[];
+  publishing_events: import("@/lib/events/types").PublishingEvent[];
   latest_run: ContentBundleRun | null;
 };

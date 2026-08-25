@@ -1,4 +1,5 @@
 import { boolean, index, integer, jsonb, pgTable, primaryKey, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 
 export const contentCategories = pgTable(
   "content_categories",
@@ -189,6 +190,8 @@ export const publishingEvents = pgTable(
     contentType: text("content_type"),
     campaign: text("campaign"),
     owner: text("owner"),
+    attribution: text("attribution"),
+    publisherAccount: text("publisher_account"),
     draftUrl: text("draft_url"),
     mediaUrl: text("media_url"),
     liveUrl: text("live_url"),
@@ -208,6 +211,9 @@ export const publishingEvents = pgTable(
     ),
     topicIdx: index("publishing_events_topic_idx").on(table.topicId),
     draftIdx: index("publishing_events_draft_idx").on(table.draftId),
+    liveUrlIdx: uniqueIndex("publishing_events_live_url_idx")
+      .on(table.liveUrl)
+      .where(sql`${table.liveUrl} is not null`),
   }),
 );
 

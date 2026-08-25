@@ -351,6 +351,8 @@ paths:
                 content_type: { type: [string, 'null'] }
                 campaign: { type: [string, 'null'] }
                 owner: { type: [string, 'null'] }
+                attribution: { type: [string, 'null'] }
+                publisher_account: { type: [string, 'null'] }
                 media_url: { type: [string, 'null'], format: uri }
                 live_url: { type: [string, 'null'], format: uri }
                 notes: { type: [string, 'null'] }
@@ -360,6 +362,35 @@ paths:
         '400': { $ref: '#/components/responses/InvalidRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
+  /api/agent/drafts/{id}/mark-published:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      operationId: markDraftPublished
+      tags: [Drafts, Events]
+      summary: Atomically and idempotently mark a Draft and linked Event published
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [live_url, published_at]
+              properties:
+                live_url: { type: string, format: uri }
+                published_at: { type: string, format: date-time }
+                name: { type: [string, 'null'] }
+                campaign: { type: [string, 'null'] }
+                owner: { type: [string, 'null'] }
+                attribution: { type: [string, 'null'] }
+                publisher_account: { type: [string, 'null'] }
+                notes: { type: [string, 'null'] }
+      responses:
+        '200': { description: Draft and Event are published }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { description: Live URL belongs to another Event }
   /api/agent/events:
     get:
       operationId: listEvents
@@ -382,6 +413,18 @@ paths:
         - name: owner
           in: query
           schema: { type: string }
+        - name: campaign
+          in: query
+          schema: { type: string }
+        - name: attribution
+          in: query
+          schema: { type: string }
+        - name: publisher_account
+          in: query
+          schema: { type: string }
+        - name: order
+          in: query
+          schema: { type: string, enum: [asc, desc] }
         - name: topic_id
           in: query
           schema: { type: string }
@@ -696,6 +739,8 @@ components:
         content_type: { type: [string, 'null'] }
         campaign: { type: [string, 'null'] }
         owner: { type: [string, 'null'] }
+        attribution: { type: [string, 'null'] }
+        publisher_account: { type: [string, 'null'] }
         draft_url: { type: [string, 'null'], format: uri }
         media_url: { type: [string, 'null'], format: uri }
         live_url: { type: [string, 'null'], format: uri }
@@ -717,6 +762,8 @@ components:
         content_type: { type: [string, 'null'] }
         campaign: { type: [string, 'null'] }
         owner: { type: [string, 'null'] }
+        attribution: { type: [string, 'null'] }
+        publisher_account: { type: [string, 'null'] }
         draft_url: { type: [string, 'null'], format: uri }
         media_url: { type: [string, 'null'], format: uri }
         live_url: { type: [string, 'null'], format: uri }
@@ -727,6 +774,15 @@ components:
           $ref: '#/components/schemas/Metadata'
         external_source: { type: [string, 'null'] }
         external_id: { type: [string, 'null'] }
+    Event:
+      allOf:
+        - $ref: '#/components/schemas/EventInput'
+        - type: object
+          required: [id, status, metadata, created_at, updated_at]
+          properties:
+            id: { type: string }
+            created_at: { type: string, format: date-time }
+            updated_at: { type: string, format: date-time }
     AuditCheck:
       type: object
       required: [key, label, status]
@@ -795,7 +851,7 @@ components:
             updated_at: { type: string, format: date-time }
     TopicBundle:
       type: object
-      required: [topic, drafts, runs, assets, latest_run]
+      required: [topic, drafts, runs, assets, publishing_events, latest_run]
       properties:
         topic:
           $ref: '#/components/schemas/Topic'
@@ -814,6 +870,11 @@ components:
           description: Generated artifact references and metadata.
           items:
             $ref: '#/components/schemas/ContentAsset'
+        publishing_events:
+          type: array
+          description: Newest-first published outputs linked to this Topic, including server-generated identifiers and timestamps.
+          items:
+            $ref: '#/components/schemas/Event'
         latest_run:
           oneOf:
             - $ref: '#/components/schemas/BundleRun'

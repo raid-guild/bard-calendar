@@ -28,6 +28,8 @@ export const eventCreateSchema = z.object({
   content_type: optionalText,
   campaign: optionalText,
   owner: optionalText,
+  attribution: optionalText,
+  publisher_account: optionalText,
   draft_url: optionalUrl,
   media_url: optionalUrl,
   live_url: optionalUrl,
@@ -49,6 +51,10 @@ export const eventListQuerySchema = z.object({
   target_channel: z.string().trim().optional(),
   status: z.enum(publishingStatuses).optional(),
   owner: z.string().trim().optional(),
+  campaign: z.string().trim().optional(),
+  attribution: z.string().trim().optional(),
+  publisher_account: z.string().trim().optional(),
+  order: z.enum(["asc", "desc"]).optional(),
   name: z.string().trim().optional(),
   search: z.string().trim().optional(),
   topic_id: z.string().trim().optional(),
@@ -56,6 +62,17 @@ export const eventListQuerySchema = z.object({
 });
 
 export const agentCreateSchema = eventCreateSchema;
+
+export const markPublishedSchema = z.object({
+  live_url: z.string().trim().url("A valid live URL is required."),
+  published_at: z.string().datetime({ offset: true }),
+  attribution: optionalText,
+  publisher_account: optionalText,
+  campaign: optionalText,
+  owner: optionalText,
+  name: optionalText,
+  notes: optionalText,
+});
 
 export const agentUpsertSchema = eventCreateSchema
   .omit({ external_source: true, external_id: true })
@@ -68,3 +85,4 @@ export type EventCreateInput = z.infer<typeof eventCreateSchema>;
 export type EventUpdateInput = z.infer<typeof eventUpdateSchema>;
 export type EventListQuery = z.infer<typeof eventListQuerySchema>;
 export type AgentUpsertInput = z.infer<typeof agentUpsertSchema>;
+export type MarkPublishedInput = z.infer<typeof markPublishedSchema>;

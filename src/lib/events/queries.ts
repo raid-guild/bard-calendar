@@ -1,8 +1,9 @@
-import { and, asc, eq, gte, ilike, lte, or } from "drizzle-orm";
+import { and, asc, desc, eq, gte, ilike, lte, or } from "drizzle-orm";
 import { getDb } from "@/lib/db/client";
 import { publishingEvents } from "@/lib/db/schema";
 import { mapCreateInputToRow, mapRowToEvent, mapUpdateInputToRow } from "@/lib/events/mapping";
 import type { EventCreateInput, EventListQuery, EventUpdateInput } from "@/lib/events/validation";
+import { normalizeLiveUrl } from "@/lib/events/live-url";
 
 export async function listEvents(filters: EventListQuery = {}) {
   const db = getDb();
@@ -12,6 +13,9 @@ export async function listEvents(filters: EventListQuery = {}) {
     filters.target_channel ? eq(publishingEvents.targetChannel, filters.target_channel) : undefined,
     filters.status ? eq(publishingEvents.status, filters.status) : undefined,
     filters.owner ? eq(publishingEvents.owner, filters.owner) : undefined,
+    filters.campaign ? eq(publishingEvents.campaign, filters.campaign) : undefined,
+    filters.attribution ? eq(publishingEvents.attribution, filters.attribution) : undefined,
+    filters.publisher_account ? eq(publishingEvents.publisherAccount, filters.publisher_account) : undefined,
     filters.topic_id ? eq(publishingEvents.topicId, filters.topic_id) : undefined,
     filters.draft_id ? eq(publishingEvents.draftId, filters.draft_id) : undefined,
     filters.name ? ilike(publishingEvents.name, `%${filters.name}%`) : undefined,
@@ -28,7 +32,7 @@ export async function listEvents(filters: EventListQuery = {}) {
     .select()
     .from(publishingEvents)
     .where(clauses.length ? and(...clauses) : undefined)
-    .orderBy(asc(publishingEvents.publishAt));
+    .orderBy(filters.order === "desc" ? desc(publishingEvents.publishAt) : asc(publishingEvents.publishAt));
 
   return rows.map(mapRowToEvent);
 }
@@ -81,9 +85,11 @@ export async function upsertEvent(input: EventCreateInput & { external_source: s
         contentType: input.content_type,
         campaign: input.campaign,
         owner: input.owner,
+        attribution: input.attribution,
+        publisherAccount: input.publisher_account,
         draftUrl: input.draft_url,
         mediaUrl: input.media_url,
-        liveUrl: input.live_url,
+        liveUrl: input.live_url ? normalizeLiveUrl(input.live_url) : input.live_url,
         topicId: input.topic_id,
         draftId: input.draft_id,
         notes: input.notes,
