@@ -15,7 +15,8 @@ export type ContentBundleRun = {
   source_url: string | null;
   source_revision: string | null;
   prism_request_id: string | null;
-  requested_channels: string[];
+  idempotency_key?: string | null;
+  requested_channels: Array<string | { platform: string; account?: string | null; format?: string | null }>;
   options: Record<string, unknown>;
   audit_checks: BundleAuditCheck[];
   instructions: string | null;
@@ -50,7 +51,8 @@ export type CreateBundleRunPayload = {
     id: string;
     url?: string | null;
   };
-  channels: string[];
+  idempotency_key?: string;
+  channels: Array<string | { platform: string; account?: string | null; format?: string | null }>;
   options?: {
     audit?: boolean;
     generate_images?: boolean;

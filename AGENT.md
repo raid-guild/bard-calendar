@@ -373,6 +373,24 @@ GET   /api/agent/bundle-runs/{id}
 PATCH /api/agent/bundle-runs/{id}
 ```
 
+### Create and Dispatch a Bundle Run
+
+```http
+POST /api/agent/topics/{topic_id}/bundle-runs
+```
+
+Send a stable `idempotency_key` (at least 8 characters). Repeating the same key
+for the same Topic returns the existing run and never redispatches Prism. Prefer
+structured channel objects with `platform`, `account`, and `format`. X requires
+the explicit `raidguild` or `queen-raida` account; generic X is rejected as
+ambiguous. LinkedIn requires the explicit `post` or `article` format.
+
+Draft scheduling is server-gated. A Draft must have `editorial_status:
+approved` and passing research, writing, brand voice, and public-output safety
+audits. Article and website routes also require a passing SEO/AEO audit. Editing
+content or routing invalidates approval. Topic lifecycle supports `active`,
+`parked` (with a required reason and optional revisit date), and `archived`.
+
 Optional fields:
 
 ```txt

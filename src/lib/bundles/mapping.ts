@@ -29,6 +29,7 @@ export function mapRowToBundleRun(row: ContentBundleRunRow) {
     source_url: row.sourceUrl,
     source_revision: row.sourceRevision,
     prism_request_id: row.prismRequestId,
+    idempotency_key: row.idempotencyKey,
     requested_channels: (row.requestedChannelsJson ?? []) as string[],
     options: (row.optionsJson ?? {}) as Record<string, unknown>,
     audit_checks: (row.auditJson ?? []) as Array<{
@@ -62,6 +63,7 @@ export function mapCreateBundleRunInputToRow(
     sourceSystem: input.source.system,
     sourceId: input.source.id,
     sourceUrl: input.source.url,
+    idempotencyKey: input.idempotency_key,
     requestedChannelsJson: input.channels,
     optionsJson: input.options,
     instructions: input.instructions,

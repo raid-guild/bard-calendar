@@ -1,4 +1,4 @@
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import {
   mapCreateBundleRunInputToRow,
   mapRowToBundleRun,
@@ -43,6 +43,14 @@ export async function getBundleRunByPrismRequestId(prismRequestId: string) {
     .select()
     .from(contentBundleRuns)
     .where(eq(contentBundleRuns.prismRequestId, prismRequestId));
+  return row ? mapRowToBundleRun(row) : null;
+}
+
+export async function getBundleRunByIdempotencyKey(topicId: string, idempotencyKey: string) {
+  const db = getDb();
+  const [row] = await db.select().from(contentBundleRuns).where(
+    and(eq(contentBundleRuns.topicId, topicId), eq(contentBundleRuns.idempotencyKey, idempotencyKey)),
+  );
   return row ? mapRowToBundleRun(row) : null;
 }
 

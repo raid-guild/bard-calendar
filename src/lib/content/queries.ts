@@ -4,11 +4,14 @@ import type { DraftAssignEventInput, DraftCreateInput, DraftListQuery, DraftUpda
 import { getDb } from "@/lib/db/client";
 import { contentDrafts, contentTopics, draftDaggers, publishingEvents } from "@/lib/db/schema";
 import { createEvent, updateEvent } from "@/lib/events/queries";
+import { EditorialGateError, evaluateEditorialGates } from "@/lib/content/editorial-gates";
 
 export async function listTopics(filters: TopicListQuery = {}) {
   const db = getDb();
   const clauses = [
     filters.status ? eq(contentTopics.status, filters.status) : undefined,
+    filters.owner ? eq(contentTopics.owner, filters.owner) : undefined,
+    filters.priority ? eq(contentTopics.priority, filters.priority) : undefined,
     filters.search
       ? or(
           ilike(contentTopics.title, `%${filters.search}%`),
@@ -66,6 +69,7 @@ export async function getTopicByExternalIdentity(
 }
 
 export async function createTopic(input: TopicCreateInput) {
+  if (input.status === "parked" && !input.parked_reason) throw new Error("A parked topic requires parked_reason.");
   const db = getDb();
   const [row] = await db.insert(contentTopics).values(mapCreateTopicInputToRow(input)).returning();
   return mapRowToTopic(row);
@@ -73,6 +77,7 @@ export async function createTopic(input: TopicCreateInput) {
 
 export async function updateTopic(id: string, input: TopicUpdateInput) {
   const db = getDb();
+  if (input.status === "parked" && !input.parked_reason) throw new Error("A parked topic requires parked_reason.");
   const [row] = await db
     .update(contentTopics)
     .set(mapUpdateTopicInputToRow(input))
@@ -100,6 +105,10 @@ export async function upsertTopic(input: TopicCreateInput & { external_source: s
         title: input.title,
         supportingMaterialMarkdown: input.supporting_material_markdown,
         status: input.status,
+        owner: input.owner,
+        priority: input.priority,
+        parkedReason: input.parked_reason,
+        revisitAt: input.revisit_at ? new Date(input.revisit_at) : null,
         createdBy: input.created_by,
         metadataJson: input.metadata ?? {},
         externalSource: input.external_source,
@@ -148,6 +157,10 @@ export async function listDrafts(filters: DraftListQuery = {}, userId?: string |
     filters.topic_id ? eq(contentDrafts.topicId, filters.topic_id) : undefined,
     filters.target_channel ? eq(contentDrafts.targetChannel, filters.target_channel) : undefined,
     filters.status ? eq(contentDrafts.status, filters.status) : undefined,
+    filters.editorial_status ? eq(contentDrafts.editorialStatus, filters.editorial_status) : undefined,
+    filters.platform ? eq(contentDrafts.routePlatform, filters.platform) : undefined,
+    filters.account ? eq(contentDrafts.routeAccount, filters.account) : undefined,
+    filters.format ? eq(contentDrafts.routeFormat, filters.format) : undefined,
     filters.search
       ? or(ilike(contentDrafts.title, `%${filters.search}%`), ilike(contentDrafts.markdownContent, `%${filters.search}%`))
       : undefined,
@@ -185,9 +198,10 @@ export async function createDraft(input: DraftCreateInput) {
 
 export async function updateDraft(id: string, input: DraftUpdateInput) {
   const db = getDb();
+  const contentChanged = input.markdown_content !== undefined || input.target_channel !== undefined || input.route !== undefined;
   const [row] = await db
     .update(contentDrafts)
-    .set(mapUpdateDraftInputToRow(input))
+    .set({ ...mapUpdateDraftInputToRow(input), ...(contentChanged ? { editorialStatus: "draft", approvedAt: null, approvedBy: null, approvalInvalidatedAt: new Date() } : {}) })
     .where(eq(contentDrafts.id, id))
     .returning();
 
@@ -215,6 +229,11 @@ export async function upsertDraft(input: DraftCreateInput & { external_source: s
         markdownContent: input.markdown_content,
         externalDraftUrl: input.external_draft_url,
         status: input.status,
+        routePlatform: input.route?.platform ?? null,
+        routeAccount: input.route?.account ?? null,
+        routeFormat: input.route?.format ?? null,
+        editorialStatus: input.editorial_status,
+        auditJson: input.audit_checks,
         createdBy: input.created_by,
         metadataJson: input.metadata ?? {},
         externalSource: input.external_source,
@@ -250,6 +269,8 @@ export async function assignDraftToEvent(draftId: string, input: DraftAssignEven
   if (!draft) {
     return null;
   }
+  const gates = evaluateEditorialGates(draft);
+  if (!gates.allowed) throw new EditorialGateError(gates.blockers);
 
   const eventInput = {
     name: input.name ?? draft.title,

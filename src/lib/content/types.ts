@@ -3,6 +3,10 @@ export type ContentTopic = {
   title: string;
   supporting_material_markdown: string | null;
   status: string;
+  owner?: string | null;
+  priority?: string;
+  parked_reason?: string | null;
+  revisit_at?: string | null;
   created_by: string | null;
   metadata: Record<string, unknown>;
   external_source: string | null;
@@ -17,9 +21,14 @@ export type ContentDraft = {
   topic_id: string;
   title: string;
   target_channel: string;
+  route?: { platform?: string; account?: string | null; format?: string | null } | null;
   markdown_content: string;
   external_draft_url: string | null;
   status: string;
+  editorial_status?: string;
+  approved_at?: string | null;
+  approved_by?: string | null;
+  audit_checks?: unknown[];
   created_by: string | null;
   metadata: Record<string, unknown>;
   external_source: string | null;

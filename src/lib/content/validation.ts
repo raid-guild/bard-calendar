@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { draftStatuses, topicStatuses } from "@/lib/content/constants";
+import { draftStatuses, editorialStatuses, topicStatuses } from "@/lib/content/constants";
+import { routeSchema } from "@/lib/content/routing";
 import { targetChannels } from "@/lib/events/constants";
 
 const optionalText = z
@@ -20,6 +21,10 @@ export const topicCreateSchema = z.object({
   supporting_material_markdown: optionalText,
   status: z.enum(topicStatuses).default("active"),
   created_by: optionalText,
+  owner: optionalText,
+  priority: z.enum(["low", "normal", "high", "urgent"]).default("normal"),
+  parked_reason: optionalText,
+  revisit_at: z.string().datetime({ offset: true }).optional().nullable(),
   metadata: metadataSchema.optional().default({}),
   external_source: optionalText,
   external_id: optionalText,
@@ -32,6 +37,8 @@ export const topicUpdateSchema = topicCreateSchema.partial().extend({
 export const topicListQuerySchema = z.object({
   status: z.enum(topicStatuses).optional(),
   search: z.string().trim().optional(),
+  owner: z.string().trim().optional(),
+  priority: z.enum(["low", "normal", "high", "urgent"]).optional(),
 });
 
 export const agentTopicUpsertSchema = topicCreateSchema
@@ -50,9 +57,13 @@ export const draftCreateSchema = z.object({
   topic_id: z.string().trim().min(1, "Topic is required."),
   title: z.string().trim().min(1, "Title is required."),
   target_channel: channelSchema,
+  route: routeSchema.optional(),
   markdown_content: z.string().default(""),
   external_draft_url: optionalUrl,
   status: z.enum(draftStatuses).default("draft"),
+  editorial_status: z.enum(editorialStatuses).default("draft"),
+  approved_by: optionalText,
+  audit_checks: z.array(z.object({ key: z.string().min(1), status: z.enum(["pass", "warning", "fail", "not_checked", "not_applicable"]), evidence: optionalText, artifact_url: optionalUrl })).default([]),
   created_by: optionalText,
   metadata: metadataSchema.optional().default({}),
   external_source: optionalText,
@@ -66,6 +77,10 @@ export const draftUpdateSchema = draftCreateSchema.partial().extend({
 export const draftListQuerySchema = z.object({
   topic_id: z.string().trim().optional(),
   target_channel: z.string().trim().optional(),
+  platform: z.enum(["x", "linkedin", "paragraph", "farcaster", "newsletter", "website", "discord", "other"]).optional(),
+  account: z.string().trim().optional(),
+  format: z.string().trim().optional(),
+  editorial_status: z.enum(editorialStatuses).optional(),
   status: z.enum(draftStatuses).optional(),
   search: z.string().trim().optional(),
 });

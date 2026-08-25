@@ -33,6 +33,8 @@ Inspect every `latest_run.audit_checks` entry. Treat `warning` and `fail` as unr
 
 For each Draft, report its `target_channel`, `status`, relevant `markdown_content`, and any scheduling or live URL fields. Use generation metadata such as `source_revision`, `generated_content_hash`, and `generated_at` when present; metadata is extensible, so do not assume absent keys are errors.
 
+Prefer the structured `route` identity over `target_channel` when present. Never guess a generic X account: use `raidguild` or `queen-raida`. LinkedIn must explicitly select `post` or `article`. Use `POST /api/agent/topics/{id}/bundle-runs` with a stable `idempotency_key`; retries with the same key return the original run without a second dispatch. Do not schedule a Draft until its editorial status is approved and every applicable required audit passes.
+
 Associate assets using `draft_id` when present and otherwise use `target_channel`. A null `stable_url` means only the private Prism artifact reference is persisted. The browser preview route requires an interactive viewer session; do not substitute the agent bearer token or claim the asset bytes were inspected.
 
 ## Change Content

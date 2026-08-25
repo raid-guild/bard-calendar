@@ -395,6 +395,43 @@ paths:
                     $ref: '#/components/schemas/BundleRun'
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
+  /api/agent/topics/{id}/bundle-runs:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      operationId: createTopicBundleRun
+      tags: [Bundles]
+      summary: Idempotently create and dispatch a content bundle run
+      description: A repeated idempotency_key returns the existing run without redispatching Prism.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [source, channels, idempotency_key]
+              properties:
+                idempotency_key: { type: string, minLength: 8, maxLength: 200 }
+                source:
+                  type: object
+                  required: [id]
+                  properties:
+                    system: { type: string, enum: [portal-post], default: portal-post }
+                    id: { type: string, minLength: 1 }
+                    url: { type: [string, 'null'], format: uri }
+                channels:
+                  type: array
+                  minItems: 1
+                  items:
+                    oneOf:
+                      - { type: string }
+                      - $ref: '#/components/schemas/ContentRoute'
+      responses:
+        '200': { description: Existing idempotent run returned }
+        '202': { description: Run created and dispatched }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409': { description: Source is linked to another topic }
     patch:
       operationId: updateBundleRun
       tags: [Bundles]
@@ -500,7 +537,17 @@ components:
       additionalProperties: true
     TopicStatus:
       type: string
-      enum: [active, archived]
+      enum: [active, parked, archived]
+    EditorialStatus:
+      type: string
+      enum: [draft, blocked, ready_for_approval, approved]
+    ContentRoute:
+      type: object
+      required: [platform]
+      properties:
+        platform: { type: string, enum: [x, linkedin, paragraph, farcaster, newsletter, website, discord, other] }
+        account: { type: [string, 'null'] }
+        format: { type: [string, 'null'], description: Explicitly use post or article for LinkedIn. }
     DraftStatus:
       type: string
       enum: [draft, ready, assigned, published, archived]
@@ -516,6 +563,10 @@ components:
         status:
           $ref: '#/components/schemas/TopicStatus'
         created_by: { type: [string, 'null'] }
+        owner: { type: [string, 'null'] }
+        priority: { type: string, enum: [low, normal, high, urgent] }
+        parked_reason: { type: [string, 'null'] }
+        revisit_at: { type: [string, 'null'], format: date-time }
         metadata:
           $ref: '#/components/schemas/Metadata'
         external_source: { type: [string, 'null'] }
@@ -549,6 +600,13 @@ components:
         topic_id: { type: string }
         title: { type: string, minLength: 1 }
         target_channel: { type: string, minLength: 1 }
+        route:
+          $ref: '#/components/schemas/ContentRoute'
+        editorial_status:
+          $ref: '#/components/schemas/EditorialStatus'
+        audit_checks:
+          type: array
+          items: { type: object, additionalProperties: true }
         markdown_content: { type: string }
         external_draft_url: { type: [string, 'null'], format: uri }
         status:

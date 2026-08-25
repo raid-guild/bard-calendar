@@ -1,24 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import {
-  createBundleRun,
-  listBundleRuns,
-  updateBundleRun,
-} from "@/lib/bundles/queries";
-import {
-  PrismBundleError,
-  triggerPrismBundle,
-} from "@/lib/bundles/prism-client";
+import { listBundleRuns } from "@/lib/bundles/queries";
+import { BundleOrchestrationError, createAndDispatchBundleRun } from "@/lib/bundles/orchestration";
 import { createBundleRunSchema } from "@/lib/bundles/validation";
-import {
-  getTopic,
-  getTopicByExternalIdentity,
-  updateTopic,
-} from "@/lib/content/queries";
+import { getTopic } from "@/lib/content/queries";
 import {
   requireEditorSession,
   requireViewerSession,
 } from "@/lib/portal-auth";
-import { isUniqueConstraintViolation } from "@/lib/db/errors";
 
 type RouteContext = {
   params: Promise<{ id: string }>;
@@ -72,88 +60,15 @@ export async function POST(request: NextRequest, context: RouteContext) {
     );
   }
 
-  const linkedTopic = await getTopicByExternalIdentity(
-    parsed.data.source.system,
-    parsed.data.source.id,
-  );
-
-  if (linkedTopic && linkedTopic.id !== topic.id) {
-    return NextResponse.json(
-      {
-        error: "This Portal post is already linked to another Topic.",
-        topic_id: linkedTopic.id,
-      },
-      { status: 409 },
-    );
-  }
-
-  let updatedTopic = topic;
-  try {
-    updatedTopic =
-      (await updateTopic(topic.id, {
-        external_source: parsed.data.source.system,
-        external_id: parsed.data.source.id,
-        metadata: {
-          ...topic.metadata,
-          portal_post_id: parsed.data.source.id,
-          ...(parsed.data.source.url
-            ? { portal_post_url: parsed.data.source.url }
-            : {}),
-        },
-      })) ?? topic;
-  } catch (error) {
-    if (
-      !isUniqueConstraintViolation(
-        error,
-        "content_topics_external_identity_idx",
-      )
-    ) {
-      throw error;
-    }
-
-    const conflict = await getTopicByExternalIdentity(
-      parsed.data.source.system,
-      parsed.data.source.id,
-    );
-    return NextResponse.json(
-      {
-        error: "This Portal post is already linked to another Topic.",
-        topic_id: conflict?.id ?? null,
-      },
-      { status: 409 },
-    );
-  }
-
   const createdBy =
     authorization.session?.handle ??
     authorization.session?.name ??
     authorization.session?.portalUserID;
-  const run = await createBundleRun(topic.id, parsed.data, createdBy);
-
   try {
-    const prism = await triggerPrismBundle(updatedTopic, run, parsed.data);
-    const dispatched = await updateBundleRun(run.id, {
-      prism_request_id: prism.requestId,
-      error_message: null,
-    });
-
-    return NextResponse.json({ run: dispatched, prism }, { status: 202 });
+    const result = await createAndDispatchBundleRun(topic.id, parsed.data, createdBy);
+    return NextResponse.json(result, { status: result.replayed ? 200 : 202 });
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Could not trigger Prism.";
-    const failed = await updateBundleRun(run.id, {
-      status: "failed",
-      stage: "dispatch",
-      error_message: message,
-      finished_at: new Date().toISOString(),
-    });
-    const status = error instanceof PrismBundleError ? error.status : 502;
-    const code =
-      error instanceof PrismBundleError ? error.code : "PRISM_DISPATCH_FAILED";
-
-    return NextResponse.json(
-      { error: message, code, run: failed },
-      { status },
-    );
+    if (error instanceof BundleOrchestrationError) return NextResponse.json({ error: error.message, code: error.code, details: error.details }, { status: error.status });
+    throw error;
   }
 }

@@ -87,15 +87,16 @@ const auditCheckSchema = z.object({
 });
 
 export const createBundleRunSchema = z.object({
+  idempotency_key: z.string().trim().min(8).max(200).optional(),
   source: z.object({
     system: z.literal("portal-post").default("portal-post"),
     id: z.string().trim().min(1, "Portal post ID is required."),
     url: defaultNullUrl,
   }),
   channels: z
-    .array(z.string().trim().min(1))
+    .array(z.union([z.string().trim().min(1), z.object({ platform: z.string().min(1), account: z.string().nullable().optional(), format: z.string().nullable().optional() })]))
     .min(1, "Select at least one channel.")
-    .transform((channels) => Array.from(new Set(channels))),
+    .transform((channels) => Array.from(new Map(channels.map((channel) => [JSON.stringify(channel), channel])).values())),
   options: z
     .object({
       audit: z.boolean().default(true),
