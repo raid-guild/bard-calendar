@@ -62,6 +62,10 @@ Supported query filters:
 ```txt
 status  active | archived
 search  partial match against title or supporting material
+publication_status  unpublished | published
+publication_start / publication_end  ISO 8601 date-time bounds
+category_id  category id or "uncategorized"
+tag  normalized tag
 ```
 
 ## Create Topic
@@ -85,6 +89,10 @@ created_by
 metadata
 external_source
 external_id
+category_id
+tags
+editorial_interest_score  integer 0-100; classification-independent editorial signal
+engagement_interest_count non-negative measurable engagement signal
 ```
 
 Example:
@@ -128,6 +136,12 @@ DELETE /api/agent/topics/{id}
 ```
 
 `PATCH` accepts any topic create field as an optional partial update.
+
+## Publish, Reopen, Categories, And Audit
+
+Topic publication is independent of the topic lifecycle and every child Draft/Event status. Use `POST /api/agent/topics/{id}/publish` with `publication_at`, `actor`, and evidence. Evidence is a `live_url`, `external_post_id`, or an explicit `manual_confirmation`. Use `POST /api/agent/topics/{id}/reopen` with a non-empty `reason` and `actor`; reopening does not change child outputs.
+
+Read the append-only history at `GET /api/agent/topics/{id}/audit`. Configure and list high-level classification records at `GET|POST /api/agent/categories`. Categories classify content; `editorial_interest_score` and `engagement_interest_count` are separate interest signals and must not be inferred from category.
 
 ## Drafts
 

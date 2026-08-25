@@ -37,7 +37,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 
   const { id } = await context.params;
   const body = await request.json().catch(() => null);
-  const parsed = topicUpdateSchema.safeParse(body);
+  const parsed = topicUpdateSchema.safeParse({ ...body, created_by: body?.created_by ?? authorization.session?.handle ?? authorization.session?.name ?? authorization.session?.portalUserID });
 
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid request.", details: parsed.error.flatten() }, { status: 400 });
